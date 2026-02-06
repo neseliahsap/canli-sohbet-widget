@@ -3,7 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Sohbet - Admin Panel</title>
+    <title>Canlı Sohbet - Admin Paneli</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Canlı sohbet yönetim paneli">
+    <meta name="theme-color" content="#667eea">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Chat Admin">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- iOS Icons -->
+    <link rel="apple-touch-icon" href="icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="96x96" href="icon-96x96.png">
+    <link rel="apple-touch-icon" sizes="128x128" href="icon-128x128.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="384x384" href="icon-384x384.png">
+    <link rel="apple-touch-icon" sizes="512x512" href="icon-512x512.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="icon-72x72.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="icon-72x72.png">
+    
     <style>
         * {
             margin: 0;
@@ -18,8 +45,93 @@
             overflow: hidden;
         }
 
-        .container {
+        /* Login Ekranı */
+        .login-screen {
             display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .login-box h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .login-box p {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .login-box input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            font-size: 15px;
+            font-family: inherit;
+            margin-bottom: 15px;
+            transition: all 0.3s;
+        }
+
+        .login-box input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .login-box button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .login-error {
+            color: #f44336;
+            font-size: 13px;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .login-error.show {
+            display: block;
+        }
+
+        .password-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+
+        .container {
+            display: none;
             height: 100vh;
             max-width: 1400px;
             margin: 0 auto;
@@ -27,7 +139,11 @@
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.2);
         }
 
-        /* Sol Panel - Sohbet Listesi */
+        .container.authenticated {
+            display: flex;
+        }
+
+        /* Rest of the CSS remains the same as before... */
         .chat-list {
             width: 350px;
             background: #f8f9fa;
@@ -77,6 +193,21 @@
             border: none;
             border-radius: 6px;
             font-size: 14px;
+        }
+
+        .logout-button {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+
+        .logout-button:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
 
         .chats-container {
@@ -153,7 +284,6 @@
             margin-top: 5px;
         }
 
-        /* Sağ Panel - Mesaj Alanı */
         .chat-area {
             flex: 1;
             display: flex;
@@ -339,7 +469,6 @@
             font-size: 14px;
         }
 
-        /* Bildirim */
         .notification {
             position: fixed;
             top: 20px;
@@ -364,7 +493,6 @@
             }
         }
 
-        /* Responsive */
         @media (max-width: 768px) {
             .chat-list {
                 width: 100%;
@@ -384,7 +512,6 @@
             }
         }
 
-        /* Scroll Bar Styling */
         ::-webkit-scrollbar {
             width: 8px;
         }
@@ -404,8 +531,27 @@
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Sol Panel: Sohbet Listesi -->
+    <!-- Login Ekranı -->
+    <div class="login-screen" id="loginScreen">
+        <div class="login-box">
+            <h1>🔐 Admin Girişi</h1>
+            <p>Canlı sohbet yönetim paneline hoş geldiniz</p>
+            <input 
+                type="password" 
+                id="passwordInput" 
+                placeholder="Şifrenizi girin..."
+                autocomplete="current-password"
+            >
+            <button onclick="login()">Giriş Yap</button>
+            <div class="login-error" id="loginError">Hatalı şifre! Lütfen tekrar deneyin.</div>
+            <div class="password-hint">
+                💡 İpucu: Şifrenizi admin-panel.js dosyasında değiştirebilirsiniz
+            </div>
+        </div>
+    </div>
+
+    <div class="container" id="mainContainer">
+        <!-- Sol Panel -->
         <div class="chat-list" id="chatList">
             <div class="chat-list-header">
                 <h2>💬 Canlı Sohbetler</h2>
@@ -418,14 +564,13 @@
                         placeholder="Adınızı girin..."
                         maxlength="30"
                     >
+                    <button class="logout-button" onclick="logout()">Çıkış</button>
                 </div>
             </div>
-            <div class="chats-container" id="chatsContainer">
-                <!-- Sohbetler buraya dinamik olarak eklenecek -->
-            </div>
+            <div class="chats-container" id="chatsContainer"></div>
         </div>
 
-        <!-- Sağ Panel: Mesaj Alanı -->
+        <!-- Sağ Panel -->
         <div class="chat-area" id="chatArea">
             <div id="emptyChatArea" class="empty-state">
                 <div class="empty-state-icon">💬</div>
@@ -444,9 +589,7 @@
                     </div>
                 </div>
 
-                <div class="messages-container" id="messagesContainer">
-                    <!-- Mesajlar buraya dinamik olarak eklenecek -->
-                </div>
+                <div class="messages-container" id="messagesContainer"></div>
 
                 <div class="message-input-area">
                     <div class="input-container">
@@ -462,19 +605,35 @@
         </div>
     </div>
 
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-    <!-- Config -->
     <script src="config.js"></script>
-
-    <!-- Admin Panel JavaScript -->
     <script src="admin-panel.js"></script>
-
-    <!-- Bildirim Sesi -->
+    
+    <!-- PWA Script -->
+    <script src="pwa-init.js"></script>
+    
     <audio id="notificationSound" preload="auto">
-        <source src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmwhBixuv+26aR0GKm/B77RiHwYjb8TyvWgcBxthx/K4ZBoIIWzB77RgGwUocsXvqVwaB y5oxvGzYhgJKW3A77JeFwciaMPwwW4bBypyyO+iVhQKJW3D77ZkHwYie8n1q18MBidk = w/K1ZxsHKWrC8bJcGQclasXuu2EcByZqxvKwWRcJIWzE8bl5UBgKKnTN8qRQFAghaMHrr2EgBipoxvS4aBoGJmvE8rJbFwkjaMPwtmwbBiV1yO+rWBQKJmnA8bZeGgckbcLxuXQYCChrxvO0ZRsGJ2rB8Llh}} IAEhNTxQJASAgP+/bk1gAAAAAgA"></source>
+        <source src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" type="audio/mp3">
     </audio>
+    
+    <!-- Bildirim İzni Butonu -->
+    <script>
+        // Login olduktan sonra bildirim izni iste
+        const originalShowMainPanel = showMainPanel;
+        showMainPanel = function() {
+            originalShowMainPanel();
+            
+            // 2 saniye sonra bildirim izni iste
+            setTimeout(() => {
+                if (Notification.permission === 'default') {
+                    const askPermission = confirm('Yeni mesaj geldiğinde bildirim almak ister misiniz?');
+                    if (askPermission) {
+                        requestNotificationPermission();
+                    }
+                }
+            }, 2000);
+        };
+    </script>
 </body>
 </html>
