@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PWA Icon Generator</title>
+</head>
+<body>
+    <h1>PWA İkon Oluşturucu</h1>
+    <p>Bu sayfayı tarayıcıda açın, aşağıdaki butonlara tıklayın ve ikonları indirin.</p>
+    
+    <canvas id="canvas" style="display:none;"></canvas>
+    
+    <button onclick="generateIcons()">İkonları Oluştur ve İndir</button>
+    
+    <div id="downloads"></div>
+    
+    <script>
+        function generateIcon(size) {
+            const canvas = document.getElementById('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            
+            // Gradient background
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Chat bubble icon
+            ctx.fillStyle = 'white';
+            const padding = size * 0.2;
+            const bubbleWidth = size - (padding * 2);
+            const bubbleHeight = bubbleWidth * 0.7;
+            const bubbleX = padding;
+            const bubbleY = padding;
+            const radius = size * 0.1;
+            
+            // Draw rounded rectangle (chat bubble)
+            ctx.beginPath();
+            ctx.moveTo(bubbleX + radius, bubbleY);
+            ctx.lineTo(bubbleX + bubbleWidth - radius, bubbleY);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY, bubbleX + bubbleWidth, bubbleY + radius);
+            ctx.lineTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight - radius);
+            ctx.quadraticCurveTo(bubbleX + bubbleWidth, bubbleY + bubbleHeight, bubbleX + bubbleWidth - radius, bubbleY + bubbleHeight);
+            ctx.lineTo(bubbleX + radius, bubbleY + bubbleHeight);
+            ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleHeight, bubbleX, bubbleY + bubbleHeight - radius);
+            ctx.lineTo(bubbleX, bubbleY + radius);
+            ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + radius, bubbleY);
+            ctx.fill();
+            
+            // Chat tail (small triangle)
+            const tailSize = size * 0.1;
+            ctx.beginPath();
+            ctx.moveTo(bubbleX + (bubbleWidth * 0.2), bubbleY + bubbleHeight);
+            ctx.lineTo(bubbleX + (bubbleWidth * 0.2), bubbleY + bubbleHeight + tailSize);
+            ctx.lineTo(bubbleX + (bubbleWidth * 0.3), bubbleY + bubbleHeight);
+            ctx.fill();
+            
+            // Three dots inside bubble
+            const dotRadius = size * 0.04;
+            const dotY = bubbleY + (bubbleHeight / 2);
+            const spacing = size * 0.08;
+            const centerX = bubbleX + (bubbleWidth / 2);
+            
+            ctx.fillStyle = '#667eea';
+            
+            ctx.beginPath();
+            ctx.arc(centerX - spacing, dotY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(centerX, dotY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.arc(centerX + spacing, dotY, dotRadius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            return canvas.toDataURL('image/png');
+        }
+        
+        function downloadIcon(dataUrl, filename) {
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = dataUrl;
+            link.click();
+        }
+        
+        function generateIcons() {
+            const sizes = [192, 512];
+            const container = document.getElementById('downloads');
+            container.innerHTML = '<h2>İkonlar oluşturuluyor...</h2>';
+            
+            setTimeout(() => {
+                sizes.forEach(size => {
+                    const dataUrl = generateIcon(size);
+                    downloadIcon(dataUrl, `icon-${size}x${size}.png`);
+                    
+                    const img = document.createElement('img');
+                    img.src = dataUrl;
+                    img.style.width = '100px';
+                    img.style.margin = '10px';
+                    container.appendChild(img);
+                });
+                
+                container.innerHTML = '<h2>✅ İkonlar indirildi!</h2>' + container.innerHTML;
+            }, 100);
+        }
+    </script>
+</body>
+</html>
