@@ -4,13 +4,13 @@
 // Firebase Console'dan aldığınız bilgileri buraya yapıştırın
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBGtJpTk7TtDD4vFr-wn3uip8KKs2yn-LQ",
-  authDomain: "canli-sohbet-a99d2.firebaseapp.com",
-  databaseURL: "https://canli-sohbet-a99d2-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "canli-sohbet-a99d2",
-  storageBucket: "canli-sohbet-a99d2.firebasestorage.app",
-  messagingSenderId: "872359561023",
-  appId: "1:872359561023:web:41b70d016a0757d469b58a"
+  apiKey: "AIzaSyBgVC1G-wN90fsnTDW4Gp1sEkuNlh7ZRWo",
+  authDomain: "canli-sohbet-3d7f5.firebaseapp.com",
+  databaseURL: "https://canli-sohbet-3d7f5-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "canli-sohbet-3d7f5",
+  storageBucket: "canli-sohbet-3d7f5.firebasestorage.app",
+  messagingSenderId: "808168120617",
+  appId: "1:808168120617:web:a09239c945181abd3ed738"
 };
 
 // ============================================
