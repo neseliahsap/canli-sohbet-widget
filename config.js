@@ -4,13 +4,13 @@
 // Firebase Console'dan aldığınız bilgileri buraya yapıştırın
 
 const firebaseConfig = {
-  apiKey: "BURAYA_API_KEY_GELECEK",
-  authDomain: "BURAYA_AUTH_DOMAIN_GELECEK",
-  databaseURL: "BURAYA_DATABASE_URL_GELECEK",
-  projectId: "BURAYA_PROJECT_ID_GELECEK",
-  storageBucket: "BURAYA_STORAGE_BUCKET_GELECEK",
-  messagingSenderId: "BURAYA_MESSAGING_SENDER_ID_GELECEK",
-  appId: "BURAYA_APP_ID_GELECEK"
+  apiKey: "AIzaSyBGtJpTk7TtDD4vFr-wn3uip8KKs2yn-LQ",
+  authDomain: "canli-sohbet-a99d2.firebaseapp.com",
+  databaseURL: "https://canli-sohbet-a99d2-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "canli-sohbet-a99d2",
+  storageBucket: "canli-sohbet-a99d2.firebasestorage.app",
+  messagingSenderId: "872359561023",
+  appId: "1:872359561023:web:41b70d016a0757d469b58a"
 };
 
 // ============================================
