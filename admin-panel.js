@@ -37,6 +37,13 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('messageInput').addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
+        
+        // Yazıyor göstergesi
+        if (currentChatId && this.value.trim().length > 0) {
+            updateTyping(true);
+        } else if (currentChatId) {
+            updateTyping(false);
+        }
     });
     
     // Agent'ı çevrimiçi olarak işaretle
@@ -217,10 +224,63 @@ function displayMessages(messages) {
         `;
     });
     
+    // Yazıyor göstergesi ekle
+    html += `
+        <div id="visitorTypingIndicator" style="display: none; padding: 12px 16px; background: white; border-radius: 18px; width: fit-content; margin-bottom: 15px; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);">
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite;"></span>
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite; animation-delay: 0.2s;"></span>
+            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #999; margin: 0 2px; animation: typing 1.4s infinite; animation-delay: 0.4s;"></span>
+        </div>
+    `;
+    
     container.innerHTML = html;
     
     // En alta scroll
     container.scrollTop = container.scrollHeight;
+    
+    // Visitor yazıyor mu dinle
+    if (currentChatId) {
+        database.ref(`chats/${currentChatId}/typing`).on('value', (snapshot) => {
+            const typing = snapshot.val();
+            const indicator = document.getElementById('visitorTypingIndicator');
+            
+            if (typing && typing.who === 'visitor' && typing.isTyping) {
+                // En son 5 saniye içinde mi?
+                if (Date.now() - typing.timestamp < 5000) {
+                    if (indicator) indicator.style.display = 'block';
+                    container.scrollTop = container.scrollHeight;
+                } else {
+                    if (indicator) indicator.style.display = 'none';
+                }
+            } else {
+                if (indicator) indicator.style.display = 'none';
+            }
+        });
+    }
+}
+
+// Yazıyor göstergesini güncelle
+let typingTimeout;
+function updateTyping(isTyping) {
+    if (!currentChatId) return;
+    
+    database.ref(`chats/${currentChatId}/typing`).set({
+        isTyping: isTyping,
+        who: 'agent',
+        timestamp: Date.now()
+    });
+    
+    // 3 saniye sonra otomatik sıfırla
+    if (isTyping) {
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            database.ref(`chats/${currentChatId}/typing`).set({
+                isTyping: false,
+                who: 'agent',
+                timestamp: Date.now()
+            });
+        }, 3000);
+    }
 }
 
 // Mesaj gönder
@@ -231,6 +291,9 @@ function sendMessage() {
     if (!message || !currentChatId) {
         return;
     }
+    
+    // Yazıyor göstergesini kapat
+    updateTyping(false);
     
     const messageData = {
         text: message,
