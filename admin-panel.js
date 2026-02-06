@@ -1,16 +1,73 @@
 // ============================================
-// ADMIN PANEL JAVASCRIPT
+// ADMIN PANEL JAVASCRIPT - ŞİFRE KORUMASLI
 // ============================================
+
+// ⚠️ ŞİFRE AYARI - BURADAN DEĞİŞTİRİN!
+const ADMIN_PASSWORD = 'Durunida2005+';  // MUTLAKA DEĞİŞTİRİN!
 
 let currentChatId = null;
 let agentName = 'Temsilci';
 let chatsListener = null;
 let messagesListener = null;
+let isAuthenticated = false;
+let lastMessageCount = 0;
 
-// Sayfa yüklendiğinde
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Admin Panel yüklendi');
+// Login kontrolü
+function checkAuth() {
+    const savedAuth = sessionStorage.getItem('adminAuth');
+    if (savedAuth === 'true') {
+        isAuthenticated = true;
+        showMainPanel();
+    }
+}
+
+// Login fonksiyonu
+function login() {
+    const password = document.getElementById('passwordInput').value;
+    const errorDiv = document.getElementById('loginError');
     
+    if (password === ADMIN_PASSWORD) {
+        isAuthenticated = true;
+        sessionStorage.setItem('adminAuth', 'true');
+        errorDiv.classList.remove('show');
+        showMainPanel();
+    } else {
+        errorDiv.classList.add('show');
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+        
+        // Hatalı giriş - ses çal
+        playErrorSound();
+    }
+}
+
+// Logout fonksiyonu
+function logout() {
+    if (confirm('Çıkış yapmak istediğinizden emin misiniz?')) {
+        isAuthenticated = false;
+        sessionStorage.removeItem('adminAuth');
+        updateAgentStatus(false);
+        document.getElementById('loginScreen').style.display = 'flex';
+        document.getElementById('mainContainer').classList.remove('authenticated');
+        document.getElementById('passwordInput').value = '';
+    }
+}
+
+// Hata sesi
+function playErrorSound() {
+    const errorSound = new Audio('data:audio/wav;base64,UklGRhQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=');
+    errorSound.play().catch(e => console.log('Ses çalınamadı'));
+}
+
+// Ana paneli göster
+function showMainPanel() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainContainer').classList.add('authenticated');
+    initializePanel();
+}
+
+// Panel'i başlat
+function initializePanel() {
     // Agent adını localStorage'dan al
     const savedAgentName = localStorage.getItem('agentName');
     if (savedAgentName) {
@@ -33,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Textarea otomatik boyutlandırma
+    // Textarea otomatik boyutlandırma ve yazıyor göstergesi
     document.getElementById('messageInput').addEventListener('input', function() {
         this.style.height = 'auto';
         this.style.height = (this.scrollHeight) + 'px';
@@ -57,7 +114,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Sohbetleri dinlemeye başla
     listenToChats();
     
-    console.log('Kurulum tamamlandı, sohbetler bekleniyor...');
+    console.log('Admin panel hazır');
+}
+
+// Enter ile login
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Admin Panel yüklendi');
+    checkAuth();
+    
+    document.getElementById('passwordInput')?.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            login();
+        }
+    });
 });
 
 // Agent durumunu güncelle
@@ -208,6 +278,15 @@ function displayMessages(messages) {
     
     messageArray.sort((a, b) => a.timestamp - b.timestamp);
     
+    // Yeni mesaj var mı kontrol et
+    if (messageArray.length > lastMessageCount) {
+        const lastMsg = messageArray[messageArray.length - 1];
+        if (lastMsg.sender === 'visitor') {
+            playNotificationSound();
+        }
+    }
+    lastMessageCount = messageArray.length;
+    
     // HTML oluştur
     let html = '';
     messageArray.forEach(msg => {
@@ -335,6 +414,7 @@ function endChat() {
         
         // UI'ı sıfırla
         currentChatId = null;
+        lastMessageCount = 0;
         document.getElementById('emptyChatArea').style.display = 'flex';
         document.getElementById('activeChatArea').style.display = 'none';
         
@@ -385,6 +465,14 @@ function showNotification(message) {
     }, 3000);
 }
 
+// Bildirim sesi çal
+function playNotificationSound() {
+    const audio = document.getElementById('notificationSound');
+    if (audio) {
+        audio.play().catch(e => console.log('Ses çalınamadı:', e));
+    }
+}
+
 // Yeni mesaj geldiğinde bildirim (sadece visitor'dan gelen için)
 database.ref('chats').on('child_changed', (snapshot) => {
     const chat = snapshot.val();
@@ -393,13 +481,24 @@ database.ref('chats').on('child_changed', (snapshot) => {
     // Eğer mevcut sohbet değilse ve okunmamış mesaj varsa
     if (chatId !== currentChatId && chat.unreadByAgent > 0) {
         // Bildirim sesi çal
-        const audio = document.getElementById('notificationSound');
-        if (audio) {
-            audio.play().catch(e => console.log('Ses çalınamadı:', e));
+        playNotificationSound();
+        
+        // Desktop notification (izin varsa)
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Yeni Mesaj', {
+                body: (chat.visitorName || 'Bir ziyaretçi') + ' mesaj gönderdi',
+                icon: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
+                badge: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png'
+            });
         }
         
         showNotification('Yeni mesaj: ' + (chat.visitorName || 'Ziyaretçi'));
     }
 });
+
+// Browser notification izni iste
+if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+}
 
 console.log('Admin Panel JavaScript yüklendi');
