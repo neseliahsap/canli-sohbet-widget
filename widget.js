@@ -43,6 +43,13 @@ document.addEventListener('DOMContentLoaded', function() {
         messageInput.addEventListener('input', function() {
             this.style.height = 'auto';
             this.style.height = (this.scrollHeight) + 'px';
+            
+            // Yazıyor göstergesi
+            if (currentChatId && this.value.trim().length > 0) {
+                updateTyping(true);
+            } else if (currentChatId) {
+                updateTyping(false);
+            }
         });
     }
     
@@ -189,6 +196,23 @@ function listenToMessages() {
             handleChatEnded();
         }
     });
+    
+    // Agent yazıyor mu dinle
+    database.ref(`chats/${currentChatId}/typing`).on('value', (snapshot) => {
+        const typing = snapshot.val();
+        const indicator = document.getElementById('typingIndicator');
+        
+        if (typing && typing.who === 'agent' && typing.isTyping) {
+            // En son 5 saniye içinde mi?
+            if (Date.now() - typing.timestamp < 5000) {
+                indicator?.classList.add('active');
+            } else {
+                indicator?.classList.remove('active');
+            }
+        } else {
+            indicator?.classList.remove('active');
+        }
+    });
 }
 
 // Mesajları göster
@@ -241,6 +265,30 @@ function displayMessages(messages) {
     }
 }
 
+// Yazıyor göstergesini güncelle
+let typingTimeout;
+function updateTyping(isTyping) {
+    if (!currentChatId) return;
+    
+    database.ref(`chats/${currentChatId}/typing`).set({
+        isTyping: isTyping,
+        who: 'visitor',
+        timestamp: Date.now()
+    });
+    
+    // 3 saniye sonra otomatik sıfırla
+    if (isTyping) {
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            database.ref(`chats/${currentChatId}/typing`).set({
+                isTyping: false,
+                who: 'visitor',
+                timestamp: Date.now()
+            });
+        }, 3000);
+    }
+}
+
 // Mesaj gönder
 function sendMessage() {
     const input = document.getElementById('messageInput');
@@ -249,6 +297,9 @@ function sendMessage() {
     if (!message || !currentChatId) {
         return;
     }
+    
+    // Yazıyor göstergesini kapat
+    updateTyping(false);
     
     const messageData = {
         text: message,
