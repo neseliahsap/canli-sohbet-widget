@@ -114,9 +114,9 @@ function startChat() {
         visitorName: visitorName,
         startTime: Date.now(),
         status: 'active',
-        lastMessage: 'Yeni sohbet başladı',
+        lastMessage: 'Sohbet başladı',
         lastMessageTime: Date.now(),
-        unreadByAgent: 0,
+        unreadByAgent: 1,
         unreadByVisitor: 0
     };
     
@@ -131,24 +131,6 @@ function startChat() {
     
     // Mesajları dinlemeye başla
     listenToMessages();
-    
-    // İlk mesajı otomatik gönder
-    setTimeout(() => {
-        const welcomeMsg = {
-            text: `Merhaba, ben ${visitorName}. Size ulaşmak istedim.`,
-            sender: 'visitor',
-            senderName: visitorName,
-            timestamp: Date.now()
-        };
-        
-        database.ref(`chats/${currentChatId}/messages`).push().set(welcomeMsg);
-        
-        database.ref(`chats/${currentChatId}`).update({
-            lastMessage: welcomeMsg.text,
-            lastMessageTime: Date.now(),
-            unreadByAgent: firebase.database.ServerValue.increment(1)
-        });
-    }, 500);
     
     console.log('Sohbet başlatıldı:', currentChatId);
 }
