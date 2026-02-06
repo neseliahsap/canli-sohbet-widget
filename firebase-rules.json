@@ -1,0 +1,33 @@
+{
+  "rules": {
+    "chats": {
+      ".read": true,
+      ".indexOn": ["lastMessageTime", "status"],
+      "$chatId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['visitorName', 'startTime', 'status'])",
+        "visitorName": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100"
+        },
+        "status": {
+          ".validate": "newData.val() === 'active' || newData.val() === 'ended'"
+        },
+        "messages": {
+          "$messageId": {
+            ".validate": "newData.hasChildren(['text', 'sender', 'timestamp']) && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 5000 && (newData.child('sender').val() === 'visitor' || newData.child('sender').val() === 'agent') && newData.child('timestamp').isNumber()"
+          }
+        },
+        "typing": {
+          ".validate": "newData.hasChildren(['isTyping', 'who', 'timestamp'])"
+        }
+      }
+    },
+    "agents": {
+      ".read": true,
+      "$agentId": {
+        ".write": true,
+        ".validate": "newData.hasChildren(['name', 'online', 'lastSeen']) && newData.child('name').isString() && newData.child('online').isBoolean() && newData.child('lastSeen').isNumber()"
+      }
+    }
+  }
+}
