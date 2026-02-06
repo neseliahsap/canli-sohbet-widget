@@ -393,10 +393,7 @@ database.ref('chats').on('child_changed', (snapshot) => {
     // Eğer mevcut sohbet değilse ve okunmamış mesaj varsa
     if (chatId !== currentChatId && chat.unreadByAgent > 0) {
         // Bildirim sesi çal
-        const audio = document.getElementById('notificationSound');
-        if (audio) {
-            audio.play().catch(e => console.log('Ses çalınamadı:', e));
-        }
+  <audio id="notificationSound" src="./notification.mp3" preload="auto"></audio>
         
         showNotification('Yeni mesaj: ' + (chat.visitorName || 'Ziyaretçi'));
     }
