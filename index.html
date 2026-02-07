@@ -668,6 +668,9 @@
                     >
                     <button class="logout-button" onclick="logout()">Çıkış</button>
                 </div>
+                <a href="analytics.html" style="display:block; margin-top:10px; padding:8px; background:rgba(255,255,255,0.1); color:white; text-align:center; border-radius:6px; text-decoration:none; font-size:13px; transition:all 0.3s;" onmouseover="this.style.background='rgba(255,255,255,0.2)'" onmouseout="this.style.background='rgba(255,255,255,0.1)'">
+                    📊 Analytics
+                </a>
             </div>
             <div class="chats-container" id="chatsContainer"></div>
         </div>
@@ -696,12 +699,36 @@
 
                 <div class="message-input-area">
                     <div class="input-container">
+                        <input type="file" id="adminFileInput" accept="image/*,.pdf,.doc,.docx" style="display:none;">
+                        <button onclick="document.getElementById('adminFileInput').click()" style="
+                            width: 40px;
+                            height: 40px;
+                            background: #f0f0f0;
+                            color: #667eea;
+                            border: none;
+                            border-radius: 50%;
+                            cursor: pointer;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            transition: all 0.3s;
+                            flex-shrink: 0;
+                            font-size: 20px;
+                        ">
+                            📎
+                        </button>
                         <textarea 
                             id="messageInput" 
                             placeholder="Mesajınızı yazın..."
                             rows="1"
                         ></textarea>
                         <button id="sendButton" onclick="sendMessage()">Gönder</button>
+                    </div>
+                    <div id="adminFilePreview" style="display:none; margin-top:10px; padding:10px; background:#f5f5f5; border-radius:8px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between;">
+                            <span id="adminFileName" style="font-size:13px; color:#666;"></span>
+                            <button onclick="clearAdminFileSelection()" style="background:none; border:none; color:#f44336; cursor:pointer; font-size:18px;">×</button>
+                        </div>
                     </div>
                 </div>
             </div>
