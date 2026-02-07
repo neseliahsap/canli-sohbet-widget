@@ -93,6 +93,36 @@ function toggleWidget() {
     }
 }
 
+// Mesai saati kontrolü
+function isBusinessHours() {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDay(); // 0 = Pazar, 6 = Cumartesi
+    
+    // Hafta sonu kontrolü
+    if (day === 0 || day === 6) {
+        return false; // Hafta sonu kapalı
+    }
+    
+    // Mesai saati: 08:30 - 20:00
+    const isAfterStart = hour > 8 || (hour === 8 && now.getMinutes() >= 30);
+    const isBeforeEnd = hour < 20;
+    
+    return isAfterStart && isBeforeEnd;
+}
+
+// Mesai saati mesajı
+function getBusinessHoursMessage() {
+    const now = new Date();
+    const day = now.getDay();
+    
+    if (day === 0 || day === 6) {
+        return 'Hafta sonu mesai dışındayız. Pazartesi - Cuma 08:30 - 20:00 arası hizmet vermekteyiz.';
+    }
+    
+    return 'Mesai saatimiz dışındasınız. Çalışma saatlerimiz: Pazartesi - Cuma, 08:30 - 20:00';
+}
+
 // Sohbeti başlat
 function startChat() {
     const nameInput = document.getElementById('visitorNameInput');
@@ -102,6 +132,16 @@ function startChat() {
         alert('Lütfen adınızı girin');
         nameInput.focus();
         return;
+    }
+    
+    // Mesai saati kontrolü
+    if (!isBusinessHours()) {
+        alert('⚠️ ' + getBusinessHoursMessage());
+        // Yine de sohbet başlatabilir ama uyarı verildi
+        const continueAnyway = confirm('Mesaj bırakmak ister misiniz? Size en kısa sürede dönüş yapacağız.');
+        if (!continueAnyway) {
+            return;
+        }
     }
     
     visitorName = name;
