@@ -5,7 +5,12 @@
 // ⚠️ ŞİFRE AYARI - SHA-256 HASH (GÜVENLİ)
 // Şifrenizi değiştirmek için: https://emn178.github.io/online-tools/sha256.html
 // Örnek: "admin123" → hash → buraya yapıştır
-const ADMIN_PASSWORD_HASH = '1a1c7602d8c2c762c757c244e11f548aa0f85fbcdf3375ff0423601ab421a7d5';  
+const ADMIN_PASSWORD_HASH = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';  // admin123
+
+// Şifrenizi değiştirmek için:
+// 1. https://emn178.github.io/online-tools/sha256.html adresine gidin
+// 2. Yeni şifrenizi yazın
+// 3. Çıkan hash'i yukarıya yapıştırın
 
 let currentChatId = null;
 let agentName = 'Temsilci';
@@ -13,9 +18,44 @@ let chatsListener = null;
 let messagesListener = null;
 let isAuthenticated = false;
 let lastMessageCount = 0;
+let selectedAdminFile = null;
 
 // Bildirim gönderilen chatler (spam önleme)
 let notifiedChats = new Set();
+
+// Dosya seç (admin)
+document.addEventListener('DOMContentLoaded', function() {
+    // ... mevcut kod ...
+    
+    const adminFileInput = document.getElementById('adminFileInput');
+    if (adminFileInput) {
+        adminFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Dosya boyutu çok büyük! Maksimum 5MB yükleyebilirsiniz.');
+                return;
+            }
+            
+            selectedAdminFile = file;
+            document.getElementById('adminFilePreview').style.display = 'block';
+            document.getElementById('adminFileName').textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+        });
+    }
+});
+
+function clearAdminFileSelection() {
+    selectedAdminFile = null;
+    document.getElementById('adminFileInput').value = '';
+    document.getElementById('adminFilePreview').style.display = 'none';
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
 
 // SHA-256 hash fonksiyonu
 async function hashPassword(password) {
@@ -139,12 +179,15 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('Admin Panel yüklendi');
     checkAuth();
     
-    document.getElementById('passwordInput')?.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            login();
-        }
-    });
+    const passwordInput = document.getElementById('passwordInput');
+    if (passwordInput) {
+        passwordInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                login();  // async fonksiyon otomatik çalışacak
+            }
+        });
+    }
 });
 
 // Agent durumunu güncelle
@@ -329,10 +372,32 @@ function displayMessages(messages) {
         const isAgent = msg.sender === 'agent';
         const time = formatTime(msg.timestamp);
         
+        let messageContent = escapeHtml(msg.text);
+        
+        // Dosya mesajı mı?
+        if (msg.type === 'file' && msg.file) {
+            const isImage = msg.file.type && msg.file.type.startsWith('image/');
+            
+            if (isImage) {
+                messageContent = `
+                    ${escapeHtml(msg.text)}<br>
+                    <img src="${msg.file.data}" alt="${msg.file.name}" style="max-width:250px; border-radius:8px; margin-top:8px; cursor:pointer;" onclick="window.open('${msg.file.data}', '_blank')">
+                    <div style="font-size:11px; opacity:0.7; margin-top:4px;">${msg.file.name}</div>
+                `;
+            } else {
+                messageContent = `
+                    ${escapeHtml(msg.text)}<br>
+                    <a href="${msg.file.data}" download="${msg.file.name}" style="display:inline-block; margin-top:8px; padding:8px 12px; background:rgba(255,255,255,0.2); border-radius:6px; text-decoration:none; color:inherit;">
+                        📄 ${msg.file.name} (${formatFileSize(msg.file.size)})
+                    </a>
+                `;
+            }
+        }
+        
         html += `
             <div class="message ${isAgent ? 'agent' : 'visitor'}">
                 <div class="message-content">
-                    ${escapeHtml(msg.text)}
+                    ${messageContent}
                     <div class="message-time">${time}</div>
                 </div>
             </div>
@@ -403,18 +468,30 @@ function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
     
-    if (!message || !currentChatId) {
+    if (!message && !selectedAdminFile) {
+        return;
+    }
+    
+    if (!currentChatId) {
         return;
     }
     
     // Yazıyor göstergesini kapat
     updateTyping(false);
     
+    // Eğer dosya seçiliyse
+    if (selectedAdminFile) {
+        sendAdminFileMessage(message || '📎 Dosya gönderildi');
+        return;
+    }
+    
+    // Normal metin mesajı
     const messageData = {
         text: message,
         sender: 'agent',
         senderName: agentName,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        type: 'text'
     };
     
     // Mesajı kaydet
@@ -434,6 +511,44 @@ function sendMessage() {
     input.focus();
     
     console.log('Mesaj gönderildi:', message);
+}
+
+// Dosya mesajı gönder (admin)
+function sendAdminFileMessage(caption) {
+    if (!selectedAdminFile || !currentChatId) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const fileData = {
+            text: caption,
+            sender: 'agent',
+            senderName: agentName,
+            timestamp: Date.now(),
+            type: 'file',
+            file: {
+                name: selectedAdminFile.name,
+                size: selectedAdminFile.size,
+                type: selectedAdminFile.type,
+                data: e.target.result
+            }
+        };
+        
+        database.ref(`chats/${currentChatId}/messages`).push().set(fileData);
+        
+        database.ref(`chats/${currentChatId}`).update({
+            lastMessage: `📎 ${selectedAdminFile.name}`,
+            lastMessageTime: Date.now(),
+            unreadByVisitor: firebase.database.ServerValue.increment(1)
+        });
+        
+        clearAdminFileSelection();
+        document.getElementById('messageInput').value = '';
+        document.getElementById('messageInput').focus();
+        
+        console.log('Dosya gönderildi:', selectedAdminFile.name);
+    };
+    
+    reader.readAsDataURL(selectedAdminFile);
 }
 
 // Sohbeti sonlandır
