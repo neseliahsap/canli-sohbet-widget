@@ -7,11 +7,6 @@
 // Örnek: "admin123" → hash → buraya yapıştır
 const ADMIN_PASSWORD_HASH = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';  // admin123
 
-// Şifrenizi değiştirmek için:
-// 1. https://emn178.github.io/online-tools/sha256.html adresine gidin
-// 2. Yeni şifrenizi yazın
-// 3. Çıkan hash'i yukarıya yapıştırın
-
 let currentChatId = null;
 let agentName = 'Temsilci';
 let chatsListener = null;
@@ -22,40 +17,6 @@ let selectedAdminFile = null;
 
 // Bildirim gönderilen chatler (spam önleme)
 let notifiedChats = new Set();
-
-// Dosya seç (admin)
-document.addEventListener('DOMContentLoaded', function() {
-    // ... mevcut kod ...
-    
-    const adminFileInput = document.getElementById('adminFileInput');
-    if (adminFileInput) {
-        adminFileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            
-            if (file.size > 5 * 1024 * 1024) {
-                alert('Dosya boyutu çok büyük! Maksimum 5MB yükleyebilirsiniz.');
-                return;
-            }
-            
-            selectedAdminFile = file;
-            document.getElementById('adminFilePreview').style.display = 'block';
-            document.getElementById('adminFileName').textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
-        });
-    }
-});
-
-function clearAdminFileSelection() {
-    selectedAdminFile = null;
-    document.getElementById('adminFileInput').value = '';
-    document.getElementById('adminFilePreview').style.display = 'none';
-}
-
-function formatFileSize(bytes) {
-    if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-}
 
 // SHA-256 hash fonksiyonu
 async function hashPassword(password) {
@@ -77,24 +38,39 @@ function checkAuth() {
 
 // Login fonksiyonu
 async function login() {
-    const password = document.getElementById('passwordInput').value;
+    console.log('Login fonksiyonu çağrıldı');
+    const passwordInput = document.getElementById('passwordInput');
+    const password = passwordInput.value;
     const errorDiv = document.getElementById('loginError');
     
-    // Şifreyi hash'le ve karşılaştır
-    const hashedPassword = await hashPassword(password);
+    if (!password) {
+        alert('Lütfen şifrenizi girin');
+        return;
+    }
     
-    if (hashedPassword === ADMIN_PASSWORD_HASH) {
-        isAuthenticated = true;
-        sessionStorage.setItem('adminAuth', 'true');
-        errorDiv.classList.remove('show');
-        showMainPanel();
-    } else {
-        errorDiv.classList.add('show');
-        document.getElementById('passwordInput').value = '';
-        document.getElementById('passwordInput').focus();
+    console.log('Şifre hash\'leniyor...');
+    
+    try {
+        // Şifreyi hash'le ve karşılaştır
+        const hashedPassword = await hashPassword(password);
+        console.log('Hash oluşturuldu:', hashedPassword.substring(0, 10) + '...');
         
-        // Hatalı giriş - ses çal
-        playErrorSound();
+        if (hashedPassword === ADMIN_PASSWORD_HASH) {
+            console.log('Şifre doğru! Giriş yapılıyor...');
+            isAuthenticated = true;
+            sessionStorage.setItem('adminAuth', 'true');
+            errorDiv.classList.remove('show');
+            showMainPanel();
+        } else {
+            console.log('Şifre yanlış!');
+            errorDiv.classList.add('show');
+            passwordInput.value = '';
+            passwordInput.focus();
+            playErrorSound();
+        }
+    } catch (error) {
+        console.error('Login hatası:', error);
+        alert('Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.');
     }
 }
 
@@ -118,6 +94,7 @@ function playErrorSound() {
 
 // Ana paneli göster
 function showMainPanel() {
+    console.log('Ana panel gösteriliyor...');
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('mainContainer').classList.add('authenticated');
     initializePanel();
@@ -125,6 +102,8 @@ function showMainPanel() {
 
 // Panel'i başlat
 function initializePanel() {
+    console.log('Panel başlatılıyor...');
+    
     // Agent adını localStorage'dan al
     const savedAgentName = localStorage.getItem('agentName');
     if (savedAgentName) {
@@ -160,6 +139,24 @@ function initializePanel() {
         }
     });
     
+    // Dosya upload
+    const adminFileInput = document.getElementById('adminFileInput');
+    if (adminFileInput) {
+        adminFileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            if (file.size > 5 * 1024 * 1024) {
+                alert('Dosya boyutu çok büyük! Maksimum 5MB yükleyebilirsiniz.');
+                return;
+            }
+            
+            selectedAdminFile = file;
+            document.getElementById('adminFilePreview').style.display = 'block';
+            document.getElementById('adminFileName').textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+        });
+    }
+    
     // Agent'ı çevrimiçi olarak işaretle
     updateAgentStatus(true);
     
@@ -174,21 +171,19 @@ function initializePanel() {
     console.log('Admin panel hazır');
 }
 
-// Enter ile login
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Admin Panel yüklendi');
-    checkAuth();
-    
-    const passwordInput = document.getElementById('passwordInput');
-    if (passwordInput) {
-        passwordInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                login();  // async fonksiyon otomatik çalışacak
-            }
-        });
-    }
-});
+// Dosya boyutu formatla
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Dosya seçimini temizle
+function clearAdminFileSelection() {
+    selectedAdminFile = null;
+    document.getElementById('adminFileInput').value = '';
+    document.getElementById('adminFilePreview').style.display = 'none';
+}
 
 // Agent durumunu güncelle
 function updateAgentStatus(isOnline) {
@@ -200,7 +195,7 @@ function updateAgentStatus(isOnline) {
     });
 }
 
-// Unique agent ID al (localStorage'da sakla)
+// Unique agent ID al
 function getAgentId() {
     let agentId = localStorage.getItem('agentId');
     if (!agentId) {
@@ -425,7 +420,6 @@ function displayMessages(messages) {
             const indicator = document.getElementById('visitorTypingIndicator');
             
             if (typing && typing.who === 'visitor' && typing.isTyping) {
-                // En son 5 saniye içinde mi?
                 if (Date.now() - typing.timestamp < 5000) {
                     if (indicator) indicator.style.display = 'block';
                     container.scrollTop = container.scrollHeight;
@@ -450,7 +444,6 @@ function updateTyping(isTyping) {
         timestamp: Date.now()
     });
     
-    // 3 saniye sonra otomatik sıfırla
     if (isTyping) {
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
@@ -494,23 +487,17 @@ function sendMessage() {
         type: 'text'
     };
     
-    // Mesajı kaydet
-    const newMessageRef = database.ref(`chats/${currentChatId}/messages`).push();
-    newMessageRef.set(messageData);
+    database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
     
-    // Sohbet bilgilerini güncelle
     database.ref(`chats/${currentChatId}`).update({
         lastMessage: message,
         lastMessageTime: Date.now(),
         unreadByVisitor: firebase.database.ServerValue.increment(1)
     });
     
-    // Input'u temizle
     input.value = '';
     input.style.height = 'auto';
     input.focus();
-    
-    console.log('Mesaj gönderildi:', message);
 }
 
 // Dosya mesajı gönder (admin)
@@ -544,8 +531,6 @@ function sendAdminFileMessage(caption) {
         clearAdminFileSelection();
         document.getElementById('messageInput').value = '';
         document.getElementById('messageInput').focus();
-        
-        console.log('Dosya gönderildi:', selectedAdminFile.name);
     };
     
     reader.readAsDataURL(selectedAdminFile);
@@ -563,7 +548,6 @@ function endChat() {
             endTime: Date.now()
         });
         
-        // UI'ı sıfırla
         currentChatId = null;
         lastMessageCount = 0;
         document.getElementById('emptyChatArea').style.display = 'flex';
@@ -581,19 +565,16 @@ function formatTime(timestamp) {
     const now = new Date();
     const diff = now - date;
     
-    // Bugün mü?
     if (diff < 86400000 && date.getDate() === now.getDate()) {
         return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     }
     
-    // Dün mü?
     const yesterday = new Date(now);
     yesterday.setDate(yesterday.getDate() - 1);
     if (date.getDate() === yesterday.getDate()) {
         return 'Dün ' + date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
     }
     
-    // Daha eski
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
 }
 
@@ -624,9 +605,6 @@ function playNotificationSound() {
     }
 }
 
-// Bildirim gönderilen chatler (spam önleme)
-let notifiedChats = new Set();
-
 // Yeni mesaj geldiğinde bildirim (sadece visitor'dan gelen için)
 database.ref('chats').on('child_changed', (snapshot) => {
     const chat = snapshot.val();
@@ -648,7 +626,7 @@ database.ref('chats').on('child_changed', (snapshot) => {
                     body: (chat.visitorName || 'Bir ziyaretçi') + ' mesaj gönderdi',
                     icon: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
                     badge: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
-                    tag: chatId  // Aynı chat için tekrar bildirim gösterme
+                    tag: chatId
                 });
             }
             
@@ -667,4 +645,25 @@ if ('Notification' in window && Notification.permission === 'default') {
     Notification.requestPermission();
 }
 
-console.log('Admin Panel JavaScript yüklendi');
+// Enter ile login - Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Admin Panel yüklendi');
+    checkAuth();
+    
+    // Enter tuşu ile login
+    const passwordInput = document.getElementById('passwordInput');
+    if (passwordInput) {
+        passwordInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                console.log('Enter tuşuna basıldı, login çağrılıyor...');
+                login();
+            }
+        });
+        passwordInput.focus();
+    }
+    
+    console.log('✅ Event listener\'lar kuruldu');
+});
+
+console.log('✅ Admin Panel JavaScript yüklendi');
