@@ -101,7 +101,7 @@ function isBusinessHours() {
     
     // Hafta sonu kontrolü
     if (day === 0 || day === 6) {
-        return false; // Hafta sonu kapalı
+        return true; // Hafta sonu kapalı
     }
     
     // Mesai saati: 08:30 - 20:00
