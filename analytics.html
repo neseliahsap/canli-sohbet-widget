@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analytics - Canlı Sohbet</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .date-range {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .date-range select {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-change {
+            font-size: 12px;
+            margin-top: 8px;
+        }
+
+        .stat-change.positive {
+            color: #4caf50;
+        }
+
+        .stat-change.negative {
+            color: #f44336;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        .table-container {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f5f5f5;
+            font-weight: 600;
+            color: #333;
+        }
+
+        tr:hover {
+            background: #f9f9f9;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .back-button {
+            display: inline-block;
+            padding: 10px 20px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .back-button:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="index.html" class="back-button">← Admin Panele Dön</a>
+
+        <div class="header">
+            <h1>📊 Analytics Dashboard</h1>
+            <div class="date-range">
+                <label>Zaman Aralığı:</label>
+                <select id="timeRange" onchange="loadAnalytics()">
+                    <option value="today">Bugün</option>
+                    <option value="week" selected>Son 7 Gün</option>
+                    <option value="month">Son 30 Gün</option>
+                    <option value="all">Tüm Zamanlar</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Toplam Sohbet</div>
+                <div class="stat-value" id="totalChats">-</div>
+                <div class="stat-change" id="chatsChange"></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Toplam Mesaj</div>
+                <div class="stat-value" id="totalMessages">-</div>
+                <div class="stat-change" id="messagesChange"></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Ortalama Yanıt Süresi</div>
+                <div class="stat-value" id="avgResponseTime">-</div>
+                <div class="stat-change" id="responseChange"></div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">Aktif Sohbetler</div>
+                <div class="stat-value" id="activeChats">-</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-title">Günlük Sohbet Grafiği</div>
+            <canvas id="chatChart" height="80"></canvas>
+        </div>
+
+        <div class="table-container">
+            <div class="chart-title">Son Sohbetler</div>
+            <table id="recentChatsTable">
+                <thead>
+                    <tr>
+                        <th>Ziyaretçi</th>
+                        <th>Tarih</th>
+                        <th>Mesaj Sayısı</th>
+                        <th>Süre</th>
+                        <th>Durum</th>
+                    </tr>
+                </thead>
+                <tbody id="recentChatsBody">
+                    <tr><td colspan="5" class="loading">Yükleniyor...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="config.js"></script>
+
+    <script>
+        let chartInstance = null;
+
+        function loadAnalytics() {
+            const timeRange = document.getElementById('timeRange').value;
+            const now = Date.now();
+            let startTime;
+
+            switch(timeRange) {
+                case 'today':
+                    startTime = new Date().setHours(0,0,0,0);
+                    break;
+                case 'week':
+                    startTime = now - (7 * 24 * 60 * 60 * 1000);
+                    break;
+                case 'month':
+                    startTime = now - (30 * 24 * 60 * 60 * 1000);
+                    break;
+                default:
+                    startTime = 0;
+            }
+
+            database.ref('chats').once('value', (snapshot) => {
+                const chats = snapshot.val();
+                if (!chats) {
+                    showNoData();
+                    return;
+                }
+
+                const chatArray = Object.keys(chats)
+                    .map(id => ({ id, ...chats[id] }))
+                    .filter(chat => chat.startTime >= startTime);
+
+                calculateStats(chatArray, startTime);
+                drawChart(chatArray, timeRange);
+                populateTable(chatArray);
+            });
+        }
+
+        function calculateStats(chats, startTime) {
+            const totalChats = chats.length;
+            const activeChats = chats.filter(c => c.status === 'active').length;
+            
+            let totalMessages = 0;
+            let totalResponseTimes = [];
+
+            chats.forEach(chat => {
+                if (chat.messages) {
+                    const messages = Object.values(chat.messages);
+                    totalMessages += messages.length;
+
+                    // Yanıt süresi hesapla
+                    for (let i = 0; i < messages.length - 1; i++) {
+                        if (messages[i].sender === 'visitor' && messages[i+1].sender === 'agent') {
+                            totalResponseTimes.push(messages[i+1].timestamp - messages[i].timestamp);
+                        }
+                    }
+                }
+            });
+
+            const avgResponseTime = totalResponseTimes.length > 0
+                ? totalResponseTimes.reduce((a,b) => a+b, 0) / totalResponseTimes.length
+                : 0;
+
+            document.getElementById('totalChats').textContent = totalChats;
+            document.getElementById('totalMessages').textContent = totalMessages;
+            document.getElementById('activeChats').textContent = activeChats;
+            document.getElementById('avgResponseTime').textContent = 
+                avgResponseTime > 0 ? formatDuration(avgResponseTime) : '-';
+        }
+
+        function drawChart(chats, timeRange) {
+            const ctx = document.getElementById('chatChart').getContext('2d');
+            
+            // Günlere göre grupla
+            const days = {};
+            chats.forEach(chat => {
+                const date = new Date(chat.startTime).toLocaleDateString('tr-TR');
+                days[date] = (days[date] || 0) + 1;
+            });
+
+            const labels = Object.keys(days);
+            const data = Object.values(days);
+
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Sohbet Sayısı',
+                        data: data,
+                        borderColor: '#667eea',
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        function populateTable(chats) {
+            const tbody = document.getElementById('recentChatsBody');
+            
+            if (chats.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#999;">Veri bulunamadı</td></tr>';
+                return;
+            }
+
+            const sorted = chats.sort((a,b) => b.startTime - a.startTime).slice(0, 20);
+            
+            tbody.innerHTML = sorted.map(chat => {
+                const messageCount = chat.messages ? Object.keys(chat.messages).length : 0;
+                const duration = chat.endTime 
+                    ? formatDuration(chat.endTime - chat.startTime)
+                    : 'Devam ediyor';
+                const status = chat.status === 'active' 
+                    ? '<span style="color:#4caf50">●</span> Aktif'
+                    : '<span style="color:#999">●</span> Bitti';
+
+                return `
+                    <tr>
+                        <td>${chat.visitorName || 'Anonim'}</td>
+                        <td>${new Date(chat.startTime).toLocaleString('tr-TR')}</td>
+                        <td>${messageCount}</td>
+                        <td>${duration}</td>
+                        <td>${status}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+
+            if (hours > 0) return `${hours}s ${minutes % 60}dk`;
+            if (minutes > 0) return `${minutes}dk ${seconds % 60}sn`;
+            return `${seconds}sn`;
+        }
+
+        function showNoData() {
+            document.getElementById('totalChats').textContent = '0';
+            document.getElementById('totalMessages').textContent = '0';
+            document.getElementById('avgResponseTime').textContent = '-';
+            document.getElementById('activeChats').textContent = '0';
+            document.getElementById('recentChatsBody').innerHTML = 
+                '<tr><td colspan="5" style="text-align:center; color:#999;">Henüz veri yok</td></tr>';
+        }
+
+        // Sayfa yüklendiğinde
+        loadAnalytics();
+    </script>
+</body>
+</html>
