@@ -503,22 +503,103 @@
         }
 
         @media (max-width: 768px) {
+            .login-box {
+                padding: 30px 20px;
+            }
+            
             .chat-list {
                 width: 100%;
-                display: none;
             }
-
-            .chat-list.mobile-visible {
-                display: flex;
+            
+            .chat-list.hide-on-mobile {
+                display: none;
             }
 
             .chat-area {
+                width: 100%;
+            }
+            
+            .chat-area.hide-on-mobile {
                 display: none;
             }
-
-            .chat-area.mobile-visible {
-                display: flex;
+            
+            .chat-list-header {
+                padding: 15px;
             }
+            
+            .chat-list-header h2 {
+                font-size: 18px;
+            }
+            
+            .agent-status {
+                flex-direction: column;
+                gap: 8px;
+            }
+            
+            .agent-name-input {
+                width: 100%;
+            }
+            
+            .logout-button {
+                width: 100%;
+            }
+            
+            .chat-header {
+                padding: 15px;
+                flex-direction: column;
+                gap: 10px;
+                align-items: flex-start;
+            }
+            
+            .visitor-info h3 {
+                font-size: 16px;
+            }
+            
+            .messages-container {
+                padding: 15px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+                font-size: 13px;
+            }
+            
+            .message-input-area {
+                padding: 15px;
+            }
+            
+            #messageInput {
+                font-size: 16px; /* iOS zoom önleme */
+            }
+            
+            #sendButton {
+                padding: 10px 18px;
+                font-size: 13px;
+            }
+            
+            /* Mobil navigasyon */
+            .mobile-back-button {
+                display: block;
+                padding: 10px 15px;
+                background: rgba(255, 255, 255, 0.2);
+                color: white;
+                border: none;
+                margin-bottom: 10px;
+                cursor: pointer;
+                border-radius: 6px;
+                font-size: 14px;
+            }
+        }
+
+        @media (min-width: 769px) {
+            .mobile-back-button {
+                display: none;
+            }
+        }
+
+        /* Mobil için geri butonu */
+        .mobile-back-button {
+            display: none;
         }
 
         ::-webkit-scrollbar {
@@ -536,6 +617,18 @@
 
         ::-webkit-scrollbar-thumb:hover {
             background: #555;
+        }
+        
+        /* Typing Animation */
+        @keyframes typing {
+            0%, 60%, 100% { 
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% { 
+                transform: translateY(-10px);
+                opacity: 1;
+            }
         }
     </style>
 </head>
@@ -590,6 +683,7 @@
             <div id="activeChatArea" style="display: none; flex-direction: column; flex: 1;">
                 <div class="chat-header">
                     <div class="visitor-info">
+                        <button class="mobile-back-button" onclick="goBackToList()">← Geri</button>
                         <h3 id="activeVisitorName">Ziyaretçi</h3>
                         <p id="activeVisitorStatus">Çevrimiçi</p>
                     </div>
