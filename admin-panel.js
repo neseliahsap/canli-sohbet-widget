@@ -5,12 +5,7 @@
 // ⚠️ ŞİFRE AYARI - SHA-256 HASH (GÜVENLİ)
 // Şifrenizi değiştirmek için: https://emn178.github.io/online-tools/sha256.html
 // Örnek: "admin123" → hash → buraya yapıştır
-const ADMIN_PASSWORD_HASH = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';  // admin123
-
-// Şifrenizi değiştirmek için:
-// 1. https://emn178.github.io/online-tools/sha256.html adresine gidin
-// 2. Yeni şifrenizi yazın
-// 3. Çıkan hash'i yukarıya yapıştırın
+const ADMIN_PASSWORD_HASH = '1a1c7602d8c2c762c757c244e11f548aa0f85fbcdf3375ff0423601ab421a7d5';  
 
 let currentChatId = null;
 let agentName = 'Temsilci';
