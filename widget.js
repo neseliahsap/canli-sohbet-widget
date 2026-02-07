@@ -1,574 +1,567 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canlı Destek</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        /* Widget Butonu */
-        .chat-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 60px;
-            height: 60px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s;
-            z-index: 9999;
-        }
-
-        .chat-button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-        }
-
-        .chat-button svg {
-            width: 30px;
-            height: 30px;
-            fill: white;
-        }
-
-        .chat-button.has-unread::after {
-            content: '';
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            width: 12px;
-            height: 12px;
-            background: #ff5722;
-            border-radius: 50%;
-            border: 2px solid white;
-            animation: pulse 2s infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-        }
-
-        /* Widget Penceresi */
-        .chat-widget {
-            position: fixed;
-            bottom: 90px;
-            right: 20px;
-            width: 380px;
-            height: 600px;
-            background: white;
-            border-radius: 16px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            display: none;
-            flex-direction: column;
-            overflow: hidden;
-            z-index: 9998;
-            animation: slideUp 0.3s ease-out;
-        }
-
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .chat-widget.open {
-            display: flex;
-        }
-
-        /* Widget Header */
-        .widget-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .header-info h3 {
-            font-size: 18px;
-            margin-bottom: 5px;
-        }
-
-        .header-info p {
-            font-size: 12px;
-            opacity: 0.9;
-        }
-
-        .close-button {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-        }
-
-        .close-button:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: rotate(90deg);
-        }
-
-        /* İsim Formu */
-        .name-form {
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex: 1;
-            background: #f8f9fa;
-        }
-
-        .name-form-content {
-            text-align: center;
-            max-width: 300px;
-        }
-
-        .name-form-icon {
-            font-size: 64px;
-            margin-bottom: 20px;
-        }
-
-        .name-form h3 {
-            font-size: 22px;
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .name-form p {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 30px;
-            line-height: 1.5;
-        }
-
-        .name-form input {
-            width: 100%;
-            padding: 14px 18px;
-            border: 2px solid #e0e0e0;
-            border-radius: 12px;
-            font-size: 15px;
-            font-family: inherit;
-            transition: all 0.3s;
-            margin-bottom: 15px;
-        }
-
-        .name-form input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .name-form button {
-            width: 100%;
-            padding: 14px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .name-form button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        /* Mesaj Alanı */
-        .widget-messages {
-            flex: 1;
-            padding: 20px;
-            overflow-y: auto;
-            background: #f8f9fa;
-            display: none;
-        }
-
-        .widget-messages.active {
-            display: block;
-        }
-
-        .message {
-            margin-bottom: 15px;
-            display: flex;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .message.visitor {
-            justify-content: flex-end;
-        }
-
-        .message.agent {
-            justify-content: flex-start;
-        }
-
-        .message-content {
-            max-width: 75%;
-            padding: 12px 16px;
-            border-radius: 18px;
-            font-size: 14px;
-            line-height: 1.5;
-            word-wrap: break-word;
-        }
-
-        .message.visitor .message-content {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-bottom-right-radius: 4px;
-        }
-
-        .message.agent .message-content {
-            background: white;
-            color: #333;
-            border-bottom-left-radius: 4px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .message-sender {
-            font-size: 11px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            opacity: 0.8;
-        }
-
-        .message-time {
-            font-size: 11px;
-            opacity: 0.7;
-            margin-top: 5px;
-            text-align: right;
-        }
-
-        /* Yazma Göstergesi */
-        .typing-indicator {
-            display: none;
-            padding: 12px 16px;
-            background: white;
-            border-radius: 18px;
-            width: fit-content;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-        }
-
-        .typing-indicator.active {
-            display: block;
-            animation: slideIn 0.3s ease-out;
-        }
-
-        .typing-dot {
-            display: inline-block;
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: #999;
-            margin: 0 2px;
-            animation: typing 1.4s infinite;
-        }
-
-        .typing-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .typing-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        @keyframes typing {
-            0%, 60%, 100% { 
-                transform: translateY(0);
-                opacity: 0.7;
-            }
-            30% { 
-                transform: translateY(-10px);
-                opacity: 1;
-            }
-        }
-
-        /* Mesaj Input */
-        .widget-input {
-            padding: 15px 20px;
-            background: white;
-            border-top: 1px solid #e0e0e0;
-            display: none;
-        }
-
-        .widget-input.active {
-            display: block;
-        }
-
-        .input-container {
-            display: flex;
-            gap: 10px;
-            align-items: flex-end;
-        }
-
-        .widget-input textarea {
-            flex: 1;
-            padding: 10px 14px;
-            border: 2px solid #e0e0e0;
-            border-radius: 20px;
-            font-size: 14px;
-            font-family: inherit;
-            resize: none;
-            max-height: 100px;
-            transition: all 0.3s;
-        }
-
-        .widget-input textarea:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .widget-input button {
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            flex-shrink: 0;
-        }
-
-        .widget-input button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-        }
-
-        .widget-input button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        .widget-input button svg {
-            width: 20px;
-            height: 20px;
-            fill: white;
-        }
-
-        /* Hoş Geldin Mesajı */
-        .welcome-message {
-            background: white;
-            padding: 16px;
-            border-radius: 18px;
-            margin-bottom: 15px;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-            border-bottom-left-radius: 4px;
-        }
-
-        .welcome-message .message-sender {
-            color: #667eea;
-            font-weight: 600;
-            margin-bottom: 8px;
-        }
-
-        .welcome-message .message-text {
-            font-size: 14px;
-            line-height: 1.6;
-            color: #333;
-        }
-
-        /* Responsive */
-        @media (max-width: 480px) {
-            .chat-widget {
-                width: 100%;
-                height: 100%;
-                bottom: 0;
-                right: 0;
-                border-radius: 0;
-            }
-        }
-
-        /* Scroll Bar */
-        ::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #ccc;
-            border-radius: 3px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: #999;
-        }
-    </style>
-</head>
-<body>
-    <!-- Chat Butonu -->
-    <div class="chat-button" id="chatButton" onclick="toggleWidget()">
-        <svg viewBox="0 0 24 24">
-            <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-        </svg>
-    </div>
-
-    <!-- Chat Widget -->
-    <div class="chat-widget" id="chatWidget">
-        <!-- Header -->
-        <div class="widget-header">
-            <div class="header-info">
-                <h3>💬 Canlı Destek</h3>
-                <p>Online - Hemen yanıt veriyoruz</p>
-            </div>
-            <button class="close-button" onclick="toggleWidget()">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="white">
-                    <path d="M15 1L1 15M1 1l14 14" stroke="currentColor" stroke-width="2"/>
-                </svg>
-            </button>
-        </div>
-
-        <!-- İsim Formu -->
-        <div class="name-form" id="nameForm">
-            <div class="name-form-content">
-                <div class="name-form-icon">👋</div>
-                <h3>Hoş Geldiniz!</h3>
-                <p>Size daha iyi yardımcı olabilmemiz için lütfen adınızı paylaşın.</p>
-                <input 
-                    type="text" 
-                    id="visitorNameInput" 
-                    placeholder="Adınız..."
-                    maxlength="30"
-                >
-                <button onclick="startChat()">Sohbete Başla</button>
-            </div>
-        </div>
-
-        <!-- Mesajlar -->
-        <div class="widget-messages" id="messagesArea">
-            <!-- Hoş geldin mesajı -->
-            <div class="welcome-message">
-                <div class="message-sender">Destek Ekibi</div>
-                <div class="message-text">
-                    Merhaba! Size nasıl yardımcı olabiliriz? 😊
-                </div>
-            </div>
-            
-            <!-- Mesajlar buraya eklenecek -->
-            <div id="messagesContainer"></div>
-            
-            <!-- Yazıyor göstergesi -->
-            <div class="typing-indicator" id="typingIndicator">
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-                <span class="typing-dot"></span>
-            </div>
-        </div>
-
-        <!-- Mesaj Input -->
-        <div class="widget-input" id="messageInputArea">
-            <div class="input-container">
-                <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="handleFileSelect(event)">
-                <button onclick="document.getElementById('fileInput').click()" style="
-                    width: 40px;
-                    height: 40px;
-                    background: #f0f0f0;
-                    color: #667eea;
-                    border: none;
-                    border-radius: 50%;
-                    cursor: pointer;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    transition: all 0.3s;
-                    flex-shrink: 0;
-                    font-size: 20px;
-                " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#f0f0f0'">
-                    📎
-                </button>
-                <textarea 
-                    id="messageInput" 
-                    placeholder="Mesajınızı yazın..."
-                    rows="1"
-                ></textarea>
-                <button onclick="sendMessage()">
-                    <svg viewBox="0 0 24 24">
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
-                    </svg>
-                </button>
-            </div>
-            <div id="filePreview" style="display:none; margin-top:10px; padding:10px; background:#f5f5f5; border-radius:8px;">
-                <div style="display:flex; align-items:center; justify-content:space-between;">
-                    <span id="fileName" style="font-size:13px; color:#666;"></span>
-                    <button onclick="clearFileSelection()" style="background:none; border:none; color:#f44336; cursor:pointer; font-size:18px;">×</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-
-    <!-- Config -->
-    <script src="config.js"></script>
-
-    <!-- Widget JavaScript -->
-    <script src="widget.js"></script>
+// ============================================
+// WIDGET JAVASCRIPT
+// ============================================
+
+let currentChatId = null;
+let visitorName = '';
+let messagesListener = null;
+let unreadCount = 0;
+let selectedFile = null;  // Seçilen dosya
+let lastVisitorMessageCount = 0;  // Bildirim sesi için
+
+// Bildirim sesi çal (visitor için)
+function playVisitorNotificationSound() {
+    const audio = document.getElementById('widgetNotificationSound');
+    if (audio) {
+        audio.play().catch(e => console.log('Ses çalınamadı:', e));
+    }
+}
+
+// Dosya seç
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
     
-    <!-- Bildirim Sesi -->
-    <audio id="widgetNotificationSound" preload="auto">
-        <source src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" type="audio/mp3">
-    </audio>
+    // Dosya boyutu kontrolü (5MB max)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Dosya boyutu çok büyük! Maksimum 5MB yükleyebilirsiniz.');
+        return;
+    }
+    
+    selectedFile = file;
+    
+    // Önizleme göster
+    document.getElementById('filePreview').style.display = 'block';
+    document.getElementById('fileName').textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
+}
 
-    <!-- Test için info -->
-    <div style="position: fixed; top: 20px; left: 20px; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); max-width: 300px;">
-        <h3 style="margin-bottom: 10px; color: #667eea;">🧪 Test Modu</h3>
-        <p style="font-size: 14px; color: #666; line-height: 1.5;">
-            Bu sayfa widget'ı test etmek içindir. Sağ alttaki butona tıklayarak sohbeti başlatabilirsiniz.
-        </p>
-        <p style="font-size: 12px; color: #999; margin-top: 10px;">
-            💡 Admin panelini <code>index.html</code> dosyasından açın.
-        </p>
-    </div>
-</body>
-</html>
+// Dosya seçimini temizle
+function clearFileSelection() {
+    selectedFile = null;
+    document.getElementById('fileInput').value = '';
+    document.getElementById('filePreview').style.display = 'none';
+}
+
+// Dosya boyutunu formatla
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Sayfa yüklendiğinde
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Widget yüklendi');
+    
+    // Mesai saati kontrolü - ekranı ayarla
+    setupWidgetScreen();
+    
+    // Önceki sohbeti kontrol et
+    const savedChatId = localStorage.getItem('chatId');
+    const savedVisitorName = localStorage.getItem('visitorName');
+    
+    if (savedChatId && savedVisitorName) {
+        // Önceki sohbet var mı kontrol et
+        database.ref(`chats/${savedChatId}`).once('value', (snapshot) => {
+            const chat = snapshot.val();
+            if (chat && chat.status !== 'ended') {
+                // Önceki sohbete devam et
+                currentChatId = savedChatId;
+                visitorName = savedVisitorName;
+                showChatArea();
+                listenToMessages();
+            }
+        });
+    }
+    
+    // Enter tuşu ile mesaj gönderme
+    const messageInput = document.getElementById('messageInput');
+    if (messageInput) {
+        messageInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        
+        // Textarea otomatik boyutlandırma
+        messageInput.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            
+            // Yazıyor göstergesi
+            if (currentChatId && this.value.trim().length > 0) {
+                updateTyping(true);
+            } else if (currentChatId) {
+                updateTyping(false);
+            }
+        });
+    }
+    
+    // İsim input'unda Enter
+    const nameInput = document.getElementById('visitorNameInput');
+    if (nameInput) {
+        nameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                startChat();
+            }
+        });
+    }
+    
+    console.log('Widget hazır');
+});
+
+// Widget'ı aç/kapat
+function toggleWidget() {
+    const widget = document.getElementById('chatWidget');
+    const button = document.getElementById('chatButton');
+    
+    if (widget.classList.contains('open')) {
+        widget.classList.remove('open');
+        
+        // Okunmamış mesajları sıfırla
+        if (currentChatId) {
+            database.ref(`chats/${currentChatId}/unreadByVisitor`).set(0);
+            unreadCount = 0;
+            button.classList.remove('has-unread');
+        }
+    } else {
+        widget.classList.add('open');
+        
+        // Focus
+        if (currentChatId) {
+            document.getElementById('messageInput')?.focus();
+        } else {
+            document.getElementById('visitorNameInput')?.focus();
+        }
+    }
+}
+
+// Mesai saati kontrolü
+function isBusinessHours() {
+    const now = new Date();
+    const hour = now.getHours();
+    const day = now.getDay(); // 0 = Pazar, 6 = Cumartesi
+    
+    // Hafta sonu kontrolü (sadece müşteri tarafı için)
+    if (day === 0 || day === 6) {
+        return false; // Hafta sonu kapalı
+    }
+    
+    // Mesai saati: 08:30 - 20:00
+    const isAfterStart = hour > 8 || (hour === 8 && now.getMinutes() >= 30);
+    const isBeforeEnd = hour < 20;
+    
+    return isAfterStart && isBeforeEnd;
+}
+
+// Mesai saati mesajı
+function getBusinessHoursMessage() {
+    return 'Mesai saatlerimiz: Pazartesi - Cuma, 08:30 - 20:00';
+}
+
+// Widget başlangıç ekranını ayarla
+function setupWidgetScreen() {
+    const nameForm = document.getElementById('nameForm');
+    
+    if (!isBusinessHours()) {
+        // Mesai dışı - farklı ekran göster
+        nameForm.innerHTML = `
+            <div class="name-form-content">
+                <div class="name-form-icon">🕐</div>
+                <h3>Mesai Saatleri Dışındayız</h3>
+                <p style="margin-bottom: 20px;">Çalışma saatlerimiz:<br><strong>Pazartesi - Cuma, 08:30 - 20:00</strong></p>
+                <p style="font-size: 13px; color: #666; margin-bottom: 25px;">Bize ulaşmak için iletişim formumuzu kullanabilirsiniz.</p>
+                <a href="https://neseliahsap.com/iletisim" target="_blank" style="
+                    display: block;
+                    width: 100%;
+                    padding: 14px;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 12px;
+                    font-size: 15px;
+                    font-weight: 600;
+                    text-decoration: none;
+                    text-align: center;
+                    transition: all 0.3s;
+                " onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 4px 12px rgba(102, 126, 234, 0.4)';" onmouseout="this.style.transform='none'; this.style.boxShadow='none';">
+                    İletişim Formu
+                </a>
+            </div>
+        `;
+    }
+}
+
+// Sohbeti başlat
+function startChat() {
+    const nameInput = document.getElementById('visitorNameInput');
+    const name = nameInput.value.trim();
+    
+    if (!name) {
+        alert('Lütfen adınızı girin');
+        nameInput.focus();
+        return;
+    }
+    
+    visitorName = name;
+    
+    // Yeni sohbet oluştur
+    const chatRef = database.ref('chats').push();
+    currentChatId = chatRef.key;
+    
+    const chatData = {
+        visitorName: visitorName,
+        startTime: Date.now(),
+        status: 'active',
+        lastMessage: 'Sohbet başladı',
+        lastMessageTime: Date.now(),
+        unreadByAgent: 1,
+        unreadByVisitor: 0
+    };
+    
+    chatRef.set(chatData);
+    
+    // localStorage'a kaydet
+    localStorage.setItem('chatId', currentChatId);
+    localStorage.setItem('visitorName', visitorName);
+    
+    // Chat alanını göster
+    showChatArea();
+    
+    // Mesajları dinlemeye başla
+    listenToMessages();
+    
+    console.log('Sohbet başlatıldı:', currentChatId);
+}
+
+// Chat alanını göster
+function showChatArea() {
+    document.getElementById('nameForm').style.display = 'none';
+    document.getElementById('messagesArea').classList.add('active');
+    document.getElementById('messageInputArea').classList.add('active');
+    
+    // Focus
+    setTimeout(() => {
+        document.getElementById('messageInput')?.focus();
+    }, 300);
+}
+
+// Mesajları dinle
+function listenToMessages() {
+    if (!currentChatId) return;
+    
+    // Önceki listener'ı kaldır
+    if (messagesListener) {
+        messagesListener.off();
+    }
+    
+    const messagesRef = database.ref(`chats/${currentChatId}/messages`);
+    
+    messagesRef.on('value', (snapshot) => {
+        const messages = snapshot.val();
+        displayMessages(messages);
+        
+        // Widget kapalıysa ve yeni mesaj varsa bildir
+        const widget = document.getElementById('chatWidget');
+        if (!widget.classList.contains('open')) {
+            checkUnreadMessages();
+        }
+    });
+    
+    messagesListener = messagesRef;
+    
+    // Sohbet durumunu dinle
+    database.ref(`chats/${currentChatId}/status`).on('value', (snapshot) => {
+        const status = snapshot.val();
+        if (status === 'ended') {
+            handleChatEnded();
+        }
+    });
+    
+    // Agent yazıyor mu dinle
+    database.ref(`chats/${currentChatId}/typing`).on('value', (snapshot) => {
+        const typing = snapshot.val();
+        const indicator = document.getElementById('typingIndicator');
+        
+        if (typing && typing.who === 'agent' && typing.isTyping) {
+            // En son 5 saniye içinde mi?
+            if (Date.now() - typing.timestamp < 5000) {
+                indicator?.classList.add('active');
+            } else {
+                indicator?.classList.remove('active');
+            }
+        } else {
+            indicator?.classList.remove('active');
+        }
+    });
+}
+
+// Mesajları göster
+function displayMessages(messages) {
+    const container = document.getElementById('messagesContainer');
+    
+    if (!messages) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    // Mesajları diziye çevir ve sırala
+    const messageArray = Object.keys(messages).map(msgId => ({
+        id: msgId,
+        ...messages[msgId]
+    }));
+    
+    messageArray.sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Yeni mesaj var mı ve agent'tan mı geliyor?
+    if (messageArray.length > lastVisitorMessageCount) {
+        const lastMsg = messageArray[messageArray.length - 1];
+        if (lastMsg.sender === 'agent') {
+            playVisitorNotificationSound();
+        }
+    }
+    lastVisitorMessageCount = messageArray.length;
+    
+    // HTML oluştur
+    let html = '';
+    messageArray.forEach(msg => {
+        const isVisitor = msg.sender === 'visitor';
+        const time = formatTime(msg.timestamp);
+        const senderName = msg.senderName || (isVisitor ? 'Siz' : 'Destek');
+        
+        let messageContent = escapeHtml(msg.text);
+        
+        // Dosya mesajı mı?
+        if (msg.type === 'file' && msg.file) {
+            const isImage = msg.file.type && msg.file.type.startsWith('image/');
+            
+            if (isImage) {
+                messageContent = `
+                    <div>${escapeHtml(msg.text)}</div>
+                    <img src="${msg.file.data}" alt="${msg.file.name}" style="max-width:200px; border-radius:8px; margin-top:8px; cursor:pointer;" onclick="window.open('${msg.file.data}', '_blank')">
+                    <div style="font-size:11px; opacity:0.7; margin-top:4px;">${msg.file.name}</div>
+                `;
+            } else {
+                messageContent = `
+                    <div>${escapeHtml(msg.text)}</div>
+                    <a href="${msg.file.data}" download="${msg.file.name}" style="display:block; margin-top:8px; padding:8px; background:rgba(0,0,0,0.05); border-radius:6px; text-decoration:none; color:inherit;">
+                        📄 ${msg.file.name}
+                        <div style="font-size:11px; opacity:0.7;">${formatFileSize(msg.file.size)}</div>
+                    </a>
+                `;
+            }
+        }
+        
+        html += `
+            <div class="message ${isVisitor ? 'visitor' : 'agent'}">
+                <div class="message-content">
+                    ${!isVisitor ? `<div class="message-sender">${escapeHtml(senderName)}</div>` : ''}
+                    ${messageContent}
+                    <div class="message-time">${time}</div>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    
+    // En alta scroll
+    const messagesArea = document.getElementById('messagesArea');
+    messagesArea.scrollTop = messagesArea.scrollHeight;
+    
+    // Okundu olarak işaretle
+    const widget = document.getElementById('chatWidget');
+    if (widget.classList.contains('open')) {
+        database.ref(`chats/${currentChatId}/unreadByVisitor`).set(0);
+        unreadCount = 0;
+        document.getElementById('chatButton').classList.remove('has-unread');
+    }
+}
+
+// Yazıyor göstergesini güncelle
+let typingTimeout;
+function updateTyping(isTyping) {
+    if (!currentChatId) return;
+    
+    database.ref(`chats/${currentChatId}/typing`).set({
+        isTyping: isTyping,
+        who: 'visitor',
+        timestamp: Date.now()
+    });
+    
+    // 3 saniye sonra otomatik sıfırla
+    if (isTyping) {
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            database.ref(`chats/${currentChatId}/typing`).set({
+                isTyping: false,
+                who: 'visitor',
+                timestamp: Date.now()
+            });
+        }, 3000);
+    }
+}
+
+// Mesaj gönder
+function sendMessage() {
+    const input = document.getElementById('messageInput');
+    const message = input.value.trim();
+    
+    if (!message && !selectedFile) {
+        return;
+    }
+    
+    if (!currentChatId) {
+        return;
+    }
+    
+    // Yazıyor göstergesini kapat
+    updateTyping(false);
+    
+    // Eğer dosya seçiliyse
+    if (selectedFile) {
+        sendFileMessage(message || '📎 Dosya gönderildi');
+        return;
+    }
+    
+    // Normal metin mesajı
+    const messageData = {
+        text: message,
+        sender: 'visitor',
+        senderName: visitorName,
+        timestamp: Date.now(),
+        type: 'text'
+    };
+    
+    // Mesajı kaydet
+    database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
+    
+    // Sohbet bilgilerini güncelle
+    database.ref(`chats/${currentChatId}`).update({
+        lastMessage: message,
+        lastMessageTime: Date.now(),
+        unreadByAgent: firebase.database.ServerValue.increment(1)
+    });
+    
+    // Input'u temizle
+    input.value = '';
+    input.style.height = 'auto';
+    input.focus();
+    
+    console.log('Mesaj gönderildi:', message);
+}
+
+// Dosya mesajı gönder
+function sendFileMessage(caption) {
+    if (!selectedFile || !currentChatId) return;
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const fileData = {
+            text: caption,
+            sender: 'visitor',
+            senderName: visitorName,
+            timestamp: Date.now(),
+            type: 'file',
+            file: {
+                name: selectedFile.name,
+                size: selectedFile.size,
+                type: selectedFile.type,
+                data: e.target.result  // Base64
+            }
+        };
+        
+        // Mesajı kaydet
+        database.ref(`chats/${currentChatId}/messages`).push().set(fileData);
+        
+        // Sohbet bilgilerini güncelle
+        database.ref(`chats/${currentChatId}`).update({
+            lastMessage: `📎 ${selectedFile.name}`,
+            lastMessageTime: Date.now(),
+            unreadByAgent: firebase.database.ServerValue.increment(1)
+        });
+        
+        // Dosya seçimini temizle
+        clearFileSelection();
+        document.getElementById('messageInput').value = '';
+        document.getElementById('messageInput').focus();
+        
+        console.log('Dosya gönderildi:', selectedFile.name);
+    };
+    
+    reader.readAsDataURL(selectedFile);
+}
+
+// Okunmamış mesajları kontrol et
+function checkUnreadMessages() {
+    if (!currentChatId) return;
+    
+    database.ref(`chats/${currentChatId}/unreadByVisitor`).once('value', (snapshot) => {
+        const unread = snapshot.val() || 0;
+        if (unread > 0) {
+            unreadCount = unread;
+            document.getElementById('chatButton').classList.add('has-unread');
+        }
+    });
+}
+
+// Sohbet sonlandığında
+function handleChatEnded() {
+    // localStorage'ı temizle
+    localStorage.removeItem('chatId');
+    localStorage.removeItem('visitorName');
+    
+    // Mesaj göster
+    const container = document.getElementById('messagesContainer');
+    container.innerHTML += `
+        <div style="text-align: center; padding: 20px; color: #999;">
+            <p style="margin-bottom: 10px;">🔚 Sohbet sonlandırıldı</p>
+            <p style="font-size: 12px;">Teşekkür ederiz!</p>
+        </div>
+    `;
+    
+    // Input'u devre dışı bırak
+    const input = document.getElementById('messageInput');
+    input.disabled = true;
+    input.placeholder = 'Sohbet sonlandırıldı';
+    
+    document.querySelector('#messageInputArea button').disabled = true;
+    
+    // Listener'ı kaldır
+    if (messagesListener) {
+        messagesListener.off();
+    }
+    
+    currentChatId = null;
+    
+    console.log('Sohbet sonlandırıldı');
+}
+
+// Zamanı formatla
+function formatTime(timestamp) {
+    if (!timestamp) return '';
+    
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+}
+
+// HTML escape
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Sayfa kapatılırken
+window.addEventListener('beforeunload', function() {
+    if (currentChatId) {
+        // Son görülme zamanını güncelle
+        database.ref(`chats/${currentChatId}`).update({
+            visitorLastSeen: Date.now()
+        });
+    }
+});
+
+console.log('Widget JavaScript yüklendi');
