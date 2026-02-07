@@ -746,24 +746,6 @@
     <audio id="notificationSound" preload="auto">
         <source src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" type="audio/mp3">
     </audio>
-    
-    <!-- Bildirim İzni Butonu -->
-    <script>
-        // Login olduktan sonra bildirim izni iste
-        const originalShowMainPanel = showMainPanel;
-        showMainPanel = function() {
-            originalShowMainPanel();
-            
-            // 2 saniye sonra bildirim izni iste
-            setTimeout(() => {
-                if (Notification.permission === 'default') {
-                    const askPermission = confirm('Yeni mesaj geldiğinde bildirim almak ister misiniz?');
-                    if (askPermission) {
-                        requestNotificationPermission();
-                    }
-                }
-            }, 2000);
-        };
-    </script>
+
 </body>
 </html>
