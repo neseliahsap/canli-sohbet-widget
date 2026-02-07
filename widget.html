@@ -293,6 +293,7 @@
 
         .typing-indicator.active {
             display: block;
+            animation: slideIn 0.3s ease-out;
         }
 
         .typing-dot {
@@ -314,8 +315,14 @@
         }
 
         @keyframes typing {
-            0%, 60%, 100% { transform: translateY(0); }
-            30% { transform: translateY(-10px); }
+            0%, 60%, 100% { 
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% { 
+                transform: translateY(-10px);
+                opacity: 1;
+            }
         }
 
         /* Mesaj Input */
@@ -500,6 +507,24 @@
         <!-- Mesaj Input -->
         <div class="widget-input" id="messageInputArea">
             <div class="input-container">
+                <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" style="display:none;" onchange="handleFileSelect(event)">
+                <button onclick="document.getElementById('fileInput').click()" style="
+                    width: 40px;
+                    height: 40px;
+                    background: #f0f0f0;
+                    color: #667eea;
+                    border: none;
+                    border-radius: 50%;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    transition: all 0.3s;
+                    flex-shrink: 0;
+                    font-size: 20px;
+                " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background='#f0f0f0'">
+                    📎
+                </button>
                 <textarea 
                     id="messageInput" 
                     placeholder="Mesajınızı yazın..."
@@ -510,6 +535,12 @@
                         <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
                     </svg>
                 </button>
+            </div>
+            <div id="filePreview" style="display:none; margin-top:10px; padding:10px; background:#f5f5f5; border-radius:8px;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                    <span id="fileName" style="font-size:13px; color:#666;"></span>
+                    <button onclick="clearFileSelection()" style="background:none; border:none; color:#f44336; cursor:pointer; font-size:18px;">×</button>
+                </div>
             </div>
         </div>
     </div>
@@ -523,5 +554,11 @@
 
     <!-- Widget JavaScript -->
     <script src="widget.js"></script>
+    
+    <!-- Bildirim Sesi -->
+    <audio id="widgetNotificationSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3" type="audio/mp3">
+    </audio>
+
 </body>
 </html>
