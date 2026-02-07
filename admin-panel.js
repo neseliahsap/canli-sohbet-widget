@@ -3,7 +3,7 @@
 // ============================================
 
 // ⚠️ ŞİFRE AYARI - BURADAN DEĞİŞTİRİN!
-const ADMIN_PASSWORD = 'Durnida2005+';  // MUTLAKA DEĞİŞTİRİN!
+const ADMIN_PASSWORD = 'Durunida2005+';  // MUTLAKA DEĞİŞTİRİN!
 
 let currentChatId = null;
 let agentName = 'Temsilci';
