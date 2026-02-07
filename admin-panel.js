@@ -2,8 +2,15 @@
 // ADMIN PANEL JAVASCRIPT - ŞİFRE KORUMASLI
 // ============================================
 
-// ⚠️ ŞİFRE AYARI - BURADAN DEĞİŞTİRİN!
-const ADMIN_PASSWORD = 'Durunida2005+';  // MUTLAKA DEĞİŞTİRİN!
+// ⚠️ ŞİFRE AYARI - SHA-256 HASH (GÜVENLİ)
+// Şifrenizi değiştirmek için: https://emn178.github.io/online-tools/sha256.html
+// Örnek: "admin123" → hash → buraya yapıştır
+const ADMIN_PASSWORD_HASH = 'ac9689e2272427085e35b9d3e3e8bed88cb3434828b43b86fc0596cad4c6e270';  // admin123
+
+// Şifrenizi değiştirmek için:
+// 1. https://emn178.github.io/online-tools/sha256.html adresine gidin
+// 2. Yeni şifrenizi yazın
+// 3. Çıkan hash'i yukarıya yapıştırın
 
 let currentChatId = null;
 let agentName = 'Temsilci';
@@ -11,6 +18,18 @@ let chatsListener = null;
 let messagesListener = null;
 let isAuthenticated = false;
 let lastMessageCount = 0;
+
+// Bildirim gönderilen chatler (spam önleme)
+let notifiedChats = new Set();
+
+// SHA-256 hash fonksiyonu
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
 
 // Login kontrolü
 function checkAuth() {
@@ -22,11 +41,14 @@ function checkAuth() {
 }
 
 // Login fonksiyonu
-function login() {
+async function login() {
     const password = document.getElementById('passwordInput').value;
     const errorDiv = document.getElementById('loginError');
     
-    if (password === ADMIN_PASSWORD) {
+    // Şifreyi hash'le ve karşılaştır
+    const hashedPassword = await hashPassword(password);
+    
+    if (hashedPassword === ADMIN_PASSWORD_HASH) {
         isAuthenticated = true;
         sessionStorage.setItem('adminAuth', 'true');
         errorDiv.classList.remove('show');
@@ -221,12 +243,21 @@ function selectChat(chatId) {
     // Okunmadı işaretini temizle
     database.ref(`chats/${chatId}/unreadByAgent`).set(0);
     
+    // Bildirim spam önleme - bu chat'i temizle
+    notifiedChats.delete(chatId);
+    
     // Mesajları dinlemeye başla
     listenToMessages(chatId);
     
     // UI'ı güncelle
     document.getElementById('emptyChatArea').style.display = 'none';
     document.getElementById('activeChatArea').style.display = 'flex';
+    
+    // Mobil görünüm: Chat listesini gizle, mesaj alanını göster
+    if (window.innerWidth <= 768) {
+        document.getElementById('chatList').classList.add('hide-on-mobile');
+        document.getElementById('chatArea').classList.remove('hide-on-mobile');
+    }
     
     // Visitor bilgilerini göster
     database.ref(`chats/${chatId}`).once('value', (snapshot) => {
@@ -242,6 +273,16 @@ function selectChat(chatId) {
     database.ref('chats').once('value', (snapshot) => {
         displayChats(snapshot.val());
     });
+}
+
+// Mobil geri butonu
+function goBackToList() {
+    if (window.innerWidth <= 768) {
+        document.getElementById('chatList').classList.remove('hide-on-mobile');
+        document.getElementById('chatArea').classList.add('hide-on-mobile');
+        currentChatId = null;
+        lastMessageCount = 0;
+    }
 }
 
 // Mesajları dinle
@@ -473,6 +514,9 @@ function playNotificationSound() {
     }
 }
 
+// Bildirim gönderilen chatler (spam önleme)
+let notifiedChats = new Set();
+
 // Yeni mesaj geldiğinde bildirim (sadece visitor'dan gelen için)
 database.ref('chats').on('child_changed', (snapshot) => {
     const chat = snapshot.val();
@@ -480,19 +524,31 @@ database.ref('chats').on('child_changed', (snapshot) => {
     
     // Eğer mevcut sohbet değilse ve okunmamış mesaj varsa
     if (chatId !== currentChatId && chat.unreadByAgent > 0) {
-        // Bildirim sesi çal
-        playNotificationSound();
         
-        // Desktop notification (izin varsa)
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Yeni Mesaj', {
-                body: (chat.visitorName || 'Bir ziyaretçi') + ' mesaj gönderdi',
-                icon: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
-                badge: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png'
-            });
+        // Bu chat için daha önce bildirim gönderildi mi?
+        if (!notifiedChats.has(chatId)) {
+            notifiedChats.add(chatId);
+            
+            // Bildirim sesi çal
+            playNotificationSound();
+            
+            // Desktop notification (izin varsa)
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification('Yeni Mesaj', {
+                    body: (chat.visitorName || 'Bir ziyaretçi') + ' mesaj gönderdi',
+                    icon: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
+                    badge: 'https://cdn-icons-png.flaticon.com/512/1041/1041916.png',
+                    tag: chatId  // Aynı chat için tekrar bildirim gösterme
+                });
+            }
+            
+            showNotification('Yeni mesaj: ' + (chat.visitorName || 'Ziyaretçi'));
+            
+            // 30 saniye sonra bu chat için tekrar bildirim gönderilebilir
+            setTimeout(() => {
+                notifiedChats.delete(chatId);
+            }, 30000);
         }
-        
-        showNotification('Yeni mesaj: ' + (chat.visitorName || 'Ziyaretçi'));
     }
 });
 
