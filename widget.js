@@ -1,10 +1,12 @@
 // ============================================
-// WIDGET - BASİT ÇALIŞAN VERSİYON
+// WIDGET - İSİM SORMA + DOSYA GÖNDERİMİ
 // ============================================
 
 let currentChatId = null;
 let botMode = true;
 let agentConnected = false;
+let visitorName = '';
+let askingForName = false;
 
 // Hoş geldin mesajı
 document.addEventListener('DOMContentLoaded', function() {
@@ -25,7 +27,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function addBotMessage(text) {
     const messagesArea = document.getElementById('messagesArea');
     
-    // Typing göster
     showTyping();
     
     setTimeout(() => {
@@ -41,6 +42,7 @@ function addBotMessage(text) {
         
         messagesArea.appendChild(messageDiv);
         scrollToBottom();
+        playNotificationSound();
     }, 1000);
 }
 
@@ -83,54 +85,89 @@ function hideTyping() {
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput ? fileInput.files[0] : null;
     
-    if (!message) return;
+    if (!message && !file) return;
+    
+    // İsim sorma modundaysa
+    if (askingForName && message) {
+        visitorName = message;
+        askingForName = false;
+        addUserMessage(message);
+        input.value = '';
+        
+        addBotMessage(`Memnun oldum ${visitorName}! Bir temsilcimizi bağlıyorum...`);
+        
+        setTimeout(() => {
+            createChatSession();
+        }, 2000);
+        
+        return;
+    }
     
     // Kullanıcı mesajını göster
-    addUserMessage(message);
+    if (message) {
+        addUserMessage(message);
+    }
+    
     input.value = '';
     
-    // Bot modunda mı?
+    // Dosya varsa gönder
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            addBotMessage('❌ Dosya çok büyük! Maksimum 5MB yükleyebilirsiniz.');
+            fileInput.value = '';
+            return;
+        }
+        
+        if (agentConnected) {
+            sendFileToAgent(file, message || '📎 Dosya');
+        } else {
+            addBotMessage('Dosya göndermek için önce bir temsilciye bağlanmalısınız.');
+        }
+        fileInput.value = '';
+        return;
+    }
+    
+    // Bot modundaysa
     if (botMode && !agentConnected && typeof getBotResponse !== 'undefined') {
         const botResponse = getBotResponse(message);
         
         if (botResponse) {
             addBotMessage(botResponse.response);
             
-            // Temsilciye yönlendir mi?
             if (botResponse.transferToAgent) {
                 setTimeout(() => {
-                    transferToAgent();
+                    askNameAndTransfer();
                 }, 2000);
             }
         } else {
             addBotMessage('Size nasıl yardımcı olabilirim?');
         }
-    } else {
-        // Canlı desteğe gönder
+    } else if (agentConnected) {
         sendToAgent(message);
     }
 }
 
-// Temsilciye aktar
-function transferToAgent() {
-    botMode = false;
-    addBotMessage('Bir temsilcimiz size yardımcı olacak. Lütfen bekleyin...');
-    
-    // Firebase'de sohbet oluştur
-    if (!currentChatId) {
-        createChatSession();
-    }
+// İsim sor ve transfer et
+function askNameAndTransfer() {
+    askingForName = true;
+    addBotMessage('Önce adınızı öğrenebilir miyim? 😊');
 }
 
 // Firebase'de sohbet oluştur
 function createChatSession() {
+    botMode = false;
+    
     const chatData = {
-        visitorName: 'Web Ziyaretçisi',
+        visitorName: visitorName || 'Web Ziyaretçisi',
         startTime: Date.now(),
         status: 'active',
-        lastMessage: 'Bot\'tan temsilciye yönlendirildi',
-        lastMessageTime: Date.now()
+        lastMessage: 'Yeni sohbet başlatıldı',
+        lastMessageTime: Date.now(),
+        unreadByAgent: 1,
+        unreadByVisitor: 0
     };
     
     const newChatRef = database.ref('chats').push();
@@ -138,11 +175,13 @@ function createChatSession() {
     newChatRef.set(chatData);
     
     localStorage.setItem('chatId', currentChatId);
+    localStorage.setItem('visitorName', visitorName);
     
-    // Agent mesajlarını dinle
+    addBotMessage('✅ Bir temsilcimiz size yardımcı olacak. Lütfen bekleyin...');
+    
     listenToAgentMessages();
     
-    console.log('Chat created:', currentChatId);
+    console.log('Sohbet oluşturuldu:', currentChatId);
 }
 
 // Agent mesajlarını dinle
@@ -154,31 +193,98 @@ function listenToAgentMessages() {
         
         if (message.sender === 'agent') {
             agentConnected = true;
-            addBotMessage(`👤 ${message.senderName}: ${message.text}`);
+            displayAgentMessage(message);
         }
     });
+}
+
+// Agent mesajını göster
+function displayAgentMessage(message) {
+    const messagesArea = document.getElementById('messagesArea');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'message bot';
+    
+    let content = `<strong>${escapeHtml(message.senderName || 'Temsilci')}:</strong><br>${escapeHtml(message.text)}`;
+    
+    // Dosya varsa
+    if (message.type === 'file' && message.file) {
+        const isImage = message.file.type && message.file.type.startsWith('image/');
+        
+        if (isImage) {
+            content += `<br><img src="${message.file.data}" style="max-width:200px; border-radius:8px; margin-top:8px; cursor:pointer;" onclick="window.open('${message.file.data}', '_blank')">`;
+        } else {
+            content += `<br><a href="${message.file.data}" download="${message.file.name}" style="display:inline-block; margin-top:8px; padding:6px 12px; background:rgba(0,0,0,0.05); border-radius:6px; text-decoration:none; color:#333;">📄 ${message.file.name}</a>`;
+        }
+    }
+    
+    messageDiv.innerHTML = `<div class="message-bubble">${content}</div>`;
+    
+    messagesArea.appendChild(messageDiv);
+    scrollToBottom();
+    playNotificationSound();
+    
+    // Okundu işaretle
+    database.ref(`chats/${currentChatId}/unreadByVisitor`).set(0);
 }
 
 // Agent'a mesaj gönder
 function sendToAgent(text) {
     if (!currentChatId) {
         createChatSession();
+        setTimeout(() => sendToAgent(text), 1000);
+        return;
     }
     
     const messageData = {
         text: text,
         sender: 'visitor',
-        senderName: 'Ziyaretçi',
+        senderName: visitorName || 'Ziyaretçi',
         timestamp: Date.now(),
         type: 'text'
     };
     
     database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
-    
     database.ref(`chats/${currentChatId}`).update({
         lastMessage: text,
-        lastMessageTime: Date.now()
+        lastMessageTime: Date.now(),
+        unreadByAgent: firebase.database.ServerValue.increment(1)
     });
+}
+
+// Dosya gönder
+function sendFileToAgent(file, caption) {
+    if (!currentChatId) {
+        addBotMessage('Önce bir temsilciye bağlanmalısınız.');
+        return;
+    }
+    
+    addUserMessage(caption || `📎 ${file.name}`);
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const messageData = {
+            text: caption || '📎 Dosya',
+            sender: 'visitor',
+            senderName: visitorName || 'Ziyaretçi',
+            timestamp: Date.now(),
+            type: 'file',
+            file: {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: e.target.result
+            }
+        };
+        
+        database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
+        database.ref(`chats/${currentChatId}`).update({
+            lastMessage: `📎 ${file.name}`,
+            lastMessageTime: Date.now(),
+            unreadByAgent: firebase.database.ServerValue.increment(1)
+        });
+    };
+    
+    reader.readAsDataURL(file);
 }
 
 // Enter ile gönder
@@ -188,6 +294,18 @@ document.getElementById('messageInput').addEventListener('keydown', function(e) 
         sendMessage();
     }
 });
+
+// Dosya seçimi
+const fileInputElement = document.getElementById('fileInput');
+if (fileInputElement) {
+    fileInputElement.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            // Dosya seçildi, gönder butonuna tıklanması bekleniyor
+            console.log('Dosya seçildi:', file.name);
+        }
+    });
+}
 
 // Yardımcı fonksiyonlar
 function scrollToBottom() {
@@ -201,4 +319,11 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-console.log('✅ Widget JS loaded');
+function playNotificationSound() {
+    const audio = document.getElementById('widgetNotificationSound');
+    if (audio) {
+        audio.play().catch(e => console.log('Ses çalınamadı'));
+    }
+}
+
+console.log('✅ Widget JS yüklendi');
