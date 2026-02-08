@@ -1,38 +1,96 @@
-// ADMIN PANEL - BASİT ŞİFRE (HASH YOK)
+// ============================================
+// ADMIN PANEL - SHA-256 + BİLDİRİMLER
+// ============================================
+
 let currentChatId = null;
 let agentName = 'Admin';
+let notifiedChats = new Set();
 
-// Kullanıcılar
-const users = {
-    'admin': 'admin123',
-    'destek': 'destek123'
-};
+// SHA-256 hash fonksiyonu
+async function hashPassword(password) {
+    const msgBuffer = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
 
 // Login
-function login() {
+async function login() {
     const username = document.getElementById('usernameInput').value.trim();
     const password = document.getElementById('passwordInput').value.trim();
     const errorDiv = document.getElementById('loginError');
     
-    console.log('🔑 Login - User:', username, 'Pass:', password);
-    console.log('📋 Kayıtlı kullanıcılar:', Object.keys(users));
+    console.log('🔑 Login attempt:', username);
     
-    if (users[username] && users[username] === password) {
-        console.log('✅ GİRİŞ BAŞARILI!');
-        sessionStorage.setItem('loggedIn', 'true');
-        sessionStorage.setItem('username', username);
-        agentName = username;
+    try {
+        // Firebase'den kullanıcıyı çek
+        const snapshot = await database.ref('users').orderByChild('username').equalTo(username).once('value');
+        const users = snapshot.val();
         
-        errorDiv.classList.remove('show');
-        document.getElementById('loginScreen').style.display = 'none';
-        document.getElementById('mainContainer').classList.add('active');
+        if (!users) {
+            console.log('❌ Kullanıcı bulunamadı');
+            errorDiv.classList.add('show');
+            return;
+        }
         
-        loadChats();
-    } else {
-        console.log('❌ GİRİŞ BAŞARISIZ!');
-        console.log('Girilen şifre:', password);
-        console.log('Beklenen şifre:', users[username]);
+        const userId = Object.keys(users)[0];
+        const user = users[userId];
+        
+        // Şifreyi hash'le ve karşılaştır
+        const hashedPassword = await hashPassword(password);
+        
+        if (hashedPassword === user.password) {
+            console.log('✅ Giriş başarılı!');
+            
+            sessionStorage.setItem('loggedIn', 'true');
+            sessionStorage.setItem('username', username);
+            sessionStorage.setItem('userId', userId);
+            agentName = user.fullName || username;
+            
+            // Son giriş zamanını güncelle
+            database.ref(`users/${userId}`).update({
+                lastLogin: Date.now()
+            });
+            
+            errorDiv.classList.remove('show');
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainContainer').classList.add('active');
+            
+            loadChats();
+            requestNotificationPermission();
+        } else {
+            console.log('❌ Şifre yanlış');
+            errorDiv.classList.add('show');
+        }
+    } catch (error) {
+        console.error('Login error:', error);
         errorDiv.classList.add('show');
+    }
+}
+
+// Bildirim izni iste
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+// Bildirim sesi çal
+function playNotificationSound() {
+    const audio = document.getElementById('notificationSound');
+    if (audio) {
+        audio.play().catch(e => console.log('Ses çalınamadı'));
+    }
+}
+
+// Browser bildirimi göster
+function showBrowserNotification(title, message) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, {
+            body: message,
+            icon: 'icon-192x192.png',
+            badge: 'icon-192x192.png'
+        });
     }
 }
 
@@ -66,9 +124,39 @@ document.addEventListener('DOMContentLoaded', function() {
 // Sohbetleri yükle
 function loadChats() {
     console.log('📥 Sohbetler yükleniyor...');
+    
     database.ref('chats').on('value', (snapshot) => {
         const chats = snapshot.val();
         displayChats(chats);
+    });
+    
+    // Yeni mesaj dinleyicisi
+    database.ref('chats').on('child_changed', (snapshot) => {
+        const chat = snapshot.val();
+        const chatId = snapshot.key;
+        
+        // Yeni mesaj var mı?
+        if (chatId !== currentChatId && chat.unreadByAgent > 0) {
+            
+            // Bu chat için bildirim gönderildi mi?
+            if (!notifiedChats.has(chatId)) {
+                notifiedChats.add(chatId);
+                
+                // Ses çal
+                playNotificationSound();
+                
+                // Browser bildirimi
+                showBrowserNotification(
+                    'Yeni Mesaj',
+                    `${chat.visitorName || 'Ziyaretçi'} mesaj gönderdi`
+                );
+                
+                // 30 saniye sonra tekrar bildirim gönderilebilir
+                setTimeout(() => {
+                    notifiedChats.delete(chatId);
+                }, 30000);
+            }
+        }
     });
 }
 
@@ -87,9 +175,11 @@ function displayChats(chats) {
     let html = '';
     chatArray.forEach(chat => {
         if (chat.status !== 'ended') {
+            const unreadBadge = chat.unreadByAgent > 0 ? `<span style="background:#f44336;color:white;border-radius:50%;padding:2px 6px;font-size:11px;margin-left:5px;">${chat.unreadByAgent}</span>` : '';
+            
             html += `
                 <div class="chat-item ${currentChatId === chat.id ? 'active' : ''}" onclick="selectChat('${chat.id}')">
-                    <strong>${chat.visitorName || 'Ziyaretçi'}</strong><br>
+                    <strong>${chat.visitorName || 'Ziyaretçi'} ${unreadBadge}</strong><br>
                     <small style="color:#666;">${chat.lastMessage || 'Yeni sohbet'}</small>
                 </div>
             `;
@@ -103,6 +193,12 @@ function displayChats(chats) {
 function selectChat(chatId) {
     console.log('💬 Sohbet seçildi:', chatId);
     currentChatId = chatId;
+    
+    // Okunmadı işaretini temizle
+    database.ref(`chats/${chatId}/unreadByAgent`).set(0);
+    
+    // Bildirim spam önleme
+    notifiedChats.delete(chatId);
     
     displayChats(null);
     database.ref('chats').once('value', (snapshot) => {
@@ -192,7 +288,8 @@ function sendMessage() {
     database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
     database.ref(`chats/${currentChatId}`).update({
         lastMessage: message,
-        lastMessageTime: Date.now()
+        lastMessageTime: Date.now(),
+        unreadByVisitor: firebase.database.ServerValue.increment(1)
     });
     
     input.value = '';
@@ -224,7 +321,8 @@ function sendFileMessage(file, caption) {
         database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
         database.ref(`chats/${currentChatId}`).update({
             lastMessage: `📎 ${file.name}`,
-            lastMessageTime: Date.now()
+            lastMessageTime: Date.now(),
+            unreadByVisitor: firebase.database.ServerValue.increment(1)
         });
         
         document.getElementById('messageInput').value = '';
