@@ -1,11 +1,8 @@
-// ============================================
-// ADMIN PANEL - BASİT VE ÇALIŞAN VERSİYON
-// ============================================
-
+// ADMIN PANEL - BASİT ŞİFRE (HASH YOK)
 let currentChatId = null;
 let agentName = 'Admin';
 
-// Kullanıcılar (basit sistem)
+// Kullanıcılar
 const users = {
     'admin': 'admin123',
     'destek': 'destek123'
@@ -13,14 +10,15 @@ const users = {
 
 // Login
 function login() {
-    const username = document.getElementById('usernameInput').value;
-    const password = document.getElementById('passwordInput').value;
+    const username = document.getElementById('usernameInput').value.trim();
+    const password = document.getElementById('passwordInput').value.trim();
     const errorDiv = document.getElementById('loginError');
     
-    console.log('Login attempt:', username);
+    console.log('🔑 Login - User:', username, 'Pass:', password);
+    console.log('📋 Kayıtlı kullanıcılar:', Object.keys(users));
     
     if (users[username] && users[username] === password) {
-        console.log('Login successful!');
+        console.log('✅ GİRİŞ BAŞARILI!');
         sessionStorage.setItem('loggedIn', 'true');
         sessionStorage.setItem('username', username);
         agentName = username;
@@ -29,10 +27,11 @@ function login() {
         document.getElementById('loginScreen').style.display = 'none';
         document.getElementById('mainContainer').classList.add('active');
         
-        // Sohbetleri yükle
         loadChats();
     } else {
-        console.log('Login failed!');
+        console.log('❌ GİRİŞ BAŞARISIZ!');
+        console.log('Girilen şifre:', password);
+        console.log('Beklenen şifre:', users[username]);
         errorDiv.classList.add('show');
     }
 }
@@ -43,11 +42,10 @@ function logout() {
     location.reload();
 }
 
-// Enter ile login
+// Enter tuşu
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('✅ Page loaded');
+    console.log('✅ Admin panel yüklendi');
     
-    // Önceden giriş yapılmış mı?
     if (sessionStorage.getItem('loggedIn') === 'true') {
         agentName = sessionStorage.getItem('username') || 'Admin';
         document.getElementById('loginScreen').style.display = 'none';
@@ -55,7 +53,6 @@ document.addEventListener('DOMContentLoaded', function() {
         loadChats();
     }
     
-    // Enter tuşu
     const passwordInput = document.getElementById('passwordInput');
     if (passwordInput) {
         passwordInput.addEventListener('keydown', function(e) {
@@ -68,8 +65,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Sohbetleri yükle
 function loadChats() {
-    console.log('Loading chats...');
-    
+    console.log('📥 Sohbetler yükleniyor...');
     database.ref('chats').on('value', (snapshot) => {
         const chats = snapshot.val();
         displayChats(chats);
@@ -85,12 +81,7 @@ function displayChats(chats) {
         return;
     }
     
-    const chatArray = Object.keys(chats).map(id => ({
-        id: id,
-        ...chats[id]
-    }));
-    
-    // Son mesaja göre sırala
+    const chatArray = Object.keys(chats).map(id => ({id, ...chats[id]}));
     chatArray.sort((a, b) => (b.lastMessageTime || 0) - (a.lastMessageTime || 0));
     
     let html = '';
@@ -110,16 +101,14 @@ function displayChats(chats) {
 
 // Sohbet seç
 function selectChat(chatId) {
-    console.log('Selected chat:', chatId);
+    console.log('💬 Sohbet seçildi:', chatId);
     currentChatId = chatId;
     
-    // Aktif class
     displayChats(null);
     database.ref('chats').once('value', (snapshot) => {
         displayChats(snapshot.val());
     });
     
-    // Mesajları yükle
     loadMessages(chatId);
 }
 
@@ -140,11 +129,7 @@ function displayMessages(messages) {
         return;
     }
     
-    const messageArray = Object.keys(messages).map(id => ({
-        id: id,
-        ...messages[id]
-    }));
-    
+    const messageArray = Object.keys(messages).map(id => ({id, ...messages[id]}));
     messageArray.sort((a, b) => a.timestamp - b.timestamp);
     
     let html = '';
@@ -171,9 +156,7 @@ function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
     
-    if (!message || !currentChatId) {
-        return;
-    }
+    if (!message || !currentChatId) return;
     
     const messageData = {
         text: message,
@@ -184,7 +167,6 @@ function sendMessage() {
     };
     
     database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
-    
     database.ref(`chats/${currentChatId}`).update({
         lastMessage: message,
         lastMessageTime: Date.now()
@@ -193,7 +175,7 @@ function sendMessage() {
     input.value = '';
 }
 
-// Enter ile mesaj gönder
+// Enter ile mesaj
 document.addEventListener('DOMContentLoaded', function() {
     const messageInput = document.getElementById('messageInput');
     if (messageInput) {
@@ -206,11 +188,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// HTML escape
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
 }
 
-console.log('✅ Admin panel loaded');
+console.log('✅ Admin panel JS yüklendi');
