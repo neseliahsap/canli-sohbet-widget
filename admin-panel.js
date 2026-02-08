@@ -137,10 +137,23 @@ function displayMessages(messages) {
         const isAgent = msg.sender === 'agent';
         const time = new Date(msg.timestamp).toLocaleTimeString('tr-TR', {hour: '2-digit', minute: '2-digit'});
         
+        let content = escapeHtml(msg.text);
+        
+        // Dosya varsa göster
+        if (msg.type === 'file' && msg.file) {
+            const isImage = msg.file.type && msg.file.type.startsWith('image/');
+            
+            if (isImage) {
+                content += `<br><img src="${msg.file.data}" style="max-width:200px; border-radius:8px; margin-top:8px; cursor:pointer;" onclick="window.open('${msg.file.data}')">`;
+            } else {
+                content += `<br><a href="${msg.file.data}" download="${msg.file.name}" style="display:inline-block; margin-top:8px; padding:6px 12px; background:#f0f0f0; border-radius:6px; text-decoration:none; color:#333;">📄 ${msg.file.name}</a>`;
+            }
+        }
+        
         html += `
             <div class="message ${isAgent ? 'agent' : 'visitor'}">
                 <div class="message-bubble">
-                    ${escapeHtml(msg.text)}<br>
+                    ${content}<br>
                     <small style="opacity:0.7;">${time}</small>
                 </div>
             </div>
@@ -155,9 +168,19 @@ function displayMessages(messages) {
 function sendMessage() {
     const input = document.getElementById('messageInput');
     const message = input.value.trim();
+    const fileInput = document.getElementById('fileInput');
+    const file = fileInput ? fileInput.files[0] : null;
     
-    if (!message || !currentChatId) return;
+    if (!message && !file) return;
+    if (!currentChatId) return;
     
+    // Dosya varsa dosya gönder
+    if (file) {
+        sendFileMessage(file, message);
+        return;
+    }
+    
+    // Normal metin mesajı
     const messageData = {
         text: message,
         sender: 'agent',
@@ -173,6 +196,57 @@ function sendMessage() {
     });
     
     input.value = '';
+}
+
+// Dosya mesajı gönder
+function sendFileMessage(file, caption) {
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Dosya çok büyük! Maksimum 5MB');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const messageData = {
+            text: caption || '📎 Dosya',
+            sender: 'agent',
+            senderName: agentName,
+            timestamp: Date.now(),
+            type: 'file',
+            file: {
+                name: file.name,
+                size: file.size,
+                type: file.type,
+                data: e.target.result
+            }
+        };
+        
+        database.ref(`chats/${currentChatId}/messages`).push().set(messageData);
+        database.ref(`chats/${currentChatId}`).update({
+            lastMessage: `📎 ${file.name}`,
+            lastMessageTime: Date.now()
+        });
+        
+        document.getElementById('messageInput').value = '';
+        document.getElementById('fileInput').value = '';
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Sohbeti sonlandır
+function endChat() {
+    if (!currentChatId) return;
+    
+    if (confirm('Bu sohbeti sonlandırmak istediğinizden emin misiniz?\n\nMüşteri puanlama formu görecek.')) {
+        database.ref(`chats/${currentChatId}`).update({
+            status: 'ended',
+            endTime: Date.now()
+        });
+        
+        alert('Sohbet sonlandırıldı. Müşteri puanlama yapabilir.');
+        currentChatId = null;
+    }
 }
 
 // Enter ile mesaj
