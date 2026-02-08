@@ -228,7 +228,10 @@
     <div class="main-container" id="mainContainer">
         <div class="header">
             <h1>💬 Admin Panel</h1>
-            <button class="logout-btn" onclick="logout()">Çıkış</button>
+            <div>
+                <a href="user-management.html" class="btn" style="margin-right:10px; text-decoration:none; display:inline-block;">👥 Kullanıcılar</a>
+                <button class="logout-btn" onclick="logout()">Çıkış</button>
+            </div>
         </div>
 
         <div class="content">
@@ -247,8 +250,11 @@
                     <p style="text-align:center; color:#999;">Soldaki bir sohbet seçin</p>
                 </div>
                 <div class="input-area">
-                    <textarea id="messageInput" rows="2" placeholder="Mesajınızı yazın..."></textarea>
+                    <input type="file" id="fileInput" accept="image/*,.pdf,.doc,.docx" style="display:none;">
+                    <button onclick="document.getElementById('fileInput').click()" style="padding:10px; background:#f0f0f0; border:none; border-radius:6px; cursor:pointer; margin-right:10px;">📎</button>
+                    <textarea id="messageInput" rows="2" placeholder="Mesajınızı yazın..." style="flex:1;"></textarea>
                     <button onclick="sendMessage()">Gönder</button>
+                    <button onclick="endChat()" style="background:#f44336; margin-left:10px;">Bitir</button>
                 </div>
             </div>
         </div>
